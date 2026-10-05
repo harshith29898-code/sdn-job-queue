@@ -8,6 +8,9 @@ Layout (matches the Project Common Reference):
       server   10.0.0.10
       w1..w3   10.0.0.21 - 10.0.0.23
     s1 connects to a remote POX controller (default 127.0.0.1:6633).
+    The VM itself is also attached to s1 as 10.0.0.254, so the server can reach
+    POX's status channel at 10.0.0.254:5002 (Mininet hosts cannot see the VM's
+    127.0.0.1).
 
 Usage (needs root, uses the system python3):
     sudo python3 topology.py                 # start the network, open the Mininet CLI
@@ -24,15 +27,16 @@ import sys
 from mininet.cli import CLI
 from mininet.log import info, setLogLevel
 from mininet.net import Mininet
-from mininet.node import OVSSwitch, RemoteController
+from mininet.node import Node, OVSSwitch, RemoteController
 
 SERVER_IP = "10.0.0.10"
+CONTROLLER_HOST_IP = "10.0.0.254"  # the VM's own address on the Mininet network
 CLIENT_IP_BASE = 0    # c1 -> 10.0.0.1, c2 -> 10.0.0.2, ...
 WORKER_IP_BASE = 20   # w1 -> 10.0.0.21, w2 -> 10.0.0.22, ...
 PREFIX_LEN = 24
 
 
-def build_network(num_clients, num_workers, controller_ip, controller_port):
+def build_network(num_clients, num_workers, controller_ip, controller_port, attach_root=True):
     """Create (but do not start) the Mininet network."""
     net = Mininet(controller=None, switch=OVSSwitch, autoSetMacs=True)
 
@@ -64,6 +68,15 @@ def build_network(num_clients, num_workers, controller_ip, controller_port):
         worker = net.addHost("w%d" % i, ip=ip)
         net.addLink(worker, s1)
 
+    if attach_root:
+        # Hosts live in private network namespaces, so they cannot reach programs
+        # running on the VM itself (like POX). Attach the VM to s1 with its own IP
+        # so the server can open the status channel to POX at CONTROLLER_HOST_IP.
+        info("*** Attaching the VM (POX host) to s1 as %s\n" % CONTROLLER_HOST_IP)
+        root = Node("root", inNamespace=False)
+        link = net.addLink(root, s1)
+        root.setIP(CONTROLLER_HOST_IP, prefixLen=PREFIX_LEN, intf=link.intf1)
+
     return net
 
 
@@ -73,6 +86,8 @@ def parse_args():
     parser.add_argument("--workers", type=int, default=3, help="number of workers (default 3)")
     parser.add_argument("--controller-ip", default="127.0.0.1", help="POX controller IP")
     parser.add_argument("--controller-port", type=int, default=6633, help="POX OpenFlow port")
+    parser.add_argument("--no-root", action="store_true",
+                        help="do not attach the VM to s1 (no server-to-POX status channel)")
     parser.add_argument("--test", action="store_true", help="run pingall and exit")
     return parser.parse_args()
 
@@ -84,7 +99,8 @@ def main():
         sys.exit("Mininet needs root. Run: sudo python3 topology.py")
 
     setLogLevel("info")
-    net = build_network(args.clients, args.workers, args.controller_ip, args.controller_port)
+    net = build_network(args.clients, args.workers, args.controller_ip,
+                        args.controller_port, attach_root=not args.no_root)
 
     net.start()
     if not net.waitConnected(timeout=10):
