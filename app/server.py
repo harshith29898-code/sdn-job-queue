@@ -1,12 +1,17 @@
-
 #!/usr/bin/env python3
 """P2: TCP job server, job queue, round-robin scheduling and POX status."""
 
-import json
+import os
+import sys
 import queue
 import socket
 import threading
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from common import decode, make_error, ProtocolError, LineReader
 
 CLIENT_PORT = 5000
 WORKER_PORT = 5001
@@ -20,10 +25,21 @@ workers = {}
 pending_clients = {}
 worker_order = []
 next_worker = 0
+seen_job_ids = set()
 
 
 def send_json(sock, message, send_lock=None):
+    import json
     data = (json.dumps(message) + "\n").encode()
+    if send_lock:
+        with send_lock:
+            sock.sendall(data)
+    else:
+        sock.sendall(data)
+
+
+def send_error(sock, code, message="", job_id=None, send_lock=None):
+    data = make_error(code, message, job_id)
     if send_lock:
         with send_lock:
             sock.sendall(data)
@@ -65,30 +81,75 @@ def register_worker(worker_id, sock, send_lock):
 def handle_worker(sock, address):
     worker_id = None
     send_lock = threading.Lock()
-    reader = sock.makefile("r", encoding="utf-8")
+    reader = LineReader(sock)
 
     try:
-        for line in reader:
-            message = json.loads(line)
-            kind = message.get("type")
+        while True:
+            line = reader.readline()
+            if line is None:
+                break
+
+            try:
+                message = decode(line)
+            except ProtocolError as exc:
+                try:
+                    send_error(sock, exc.code, exc.message, send_lock=send_lock)
+                except OSError:
+                    break
+                continue
+
+            kind = message["type"]
 
             if kind == "REGISTER":
-                worker_id = str(message["worker_id"])
+                if worker_id is not None:
+                    send_error(
+                        sock, "BAD_VALUE", "Worker already registered",
+                        send_lock=send_lock
+                    )
+                    continue
+
+                worker_id = message["worker_id"]
+
+                # Send the ACK BEFORE making this worker schedulable.
+                try:
+                    send_json(sock, {
+                        "type": "ACK",
+                        "ref": "REGISTER",
+                        "worker_id": worker_id,
+                    }, send_lock)
+                except OSError:
+                    break
+
                 register_worker(worker_id, sock, send_lock)
 
-            elif kind == "HEARTBEAT" and worker_id:
+            elif kind == "HEARTBEAT":
+                if worker_id is None or message["worker_id"] != worker_id:
+                    send_error(
+                        sock, "BAD_VALUE", "Worker is not registered or ID mismatched",
+                        send_lock=send_lock
+                    )
+                    continue
+
                 with lock:
                     if workers.get(worker_id, {}).get("socket") is sock:
                         workers[worker_id]["last_seen"] = time.monotonic()
 
-            elif kind == "RESULT" and worker_id:
-                job_id = message.get("job_id")
+            elif kind == "RESULT":
+                if worker_id is None or message["worker_id"] != worker_id:
+                    send_error(
+                        sock, "BAD_VALUE", "Worker is not registered or ID mismatched",
+                        send_lock=send_lock
+                    )
+                    continue
+
+                job_id = message["job_id"]
+                client = None
 
                 with lock:
                     state = workers.get(worker_id)
                     if state and state["socket"] is sock:
                         state["busy"] = False
-                    client = pending_clients.pop(job_id, None)
+                        client = pending_clients.pop(job_id, None)
 
                 report_status(f"LOAD {worker_id} 0")
 
@@ -100,7 +161,14 @@ def handle_worker(sock, address):
 
                 print(f"[RESULT] Job {job_id} completed by {worker_id}")
 
-    except (OSError, ValueError, KeyError) as exc:
+            else:
+                send_error(
+                    sock, "BAD_VALUE",
+                    f"Unexpected message type for worker connection: {kind}",
+                    send_lock=send_lock
+                )
+
+    except OSError as exc:
         print(f"[WORKER] {address}: {exc}")
 
     finally:
@@ -111,52 +179,76 @@ def handle_worker(sock, address):
                 report_status(f"WORKER_DOWN {worker_id}")
                 print(f"[WORKER] {worker_id} disconnected")
 
-        reader.close()
         sock.close()
 
 
 def handle_client(sock, address):
-    reader = sock.makefile("r", encoding="utf-8")
+    reader = LineReader(sock)
 
     try:
-        for line in reader:
+        while True:
+            line = reader.readline()
+            if line is None:
+                break
+
             try:
-                message = json.loads(line)
-                if message.get("type") != "JOB":
-                    raise ValueError("Expected a JOB message")
+                message = decode(line)
+            except ProtocolError as exc:
+                send_error(sock, exc.code, exc.message)
+                continue
 
-                job_id = message.get("job_id", int(time.time() * 1000))
-                job = {
-                    "type": "JOB",
-                    "job_id": job_id,
-                    "payload_size": max(
-                        1, min(int(message.get("payload_size", 1000)), 1_000_000)
-                    ),
-                    "duration": max(
-                        0.1, min(float(message.get("duration", 2)), 30)
-                    ),
-                }
+            if message["type"] != "JOB":
+                send_error(
+                    sock, "BAD_VALUE",
+                    f"Expected JOB message, got {message['type']}"
+                )
+                continue
 
-                with lock:
+            job_id = message["job_id"]
+            job = {
+                "type": "JOB",
+                "job_id": job_id,
+                "payload_size": message["payload_size"],
+                "duration": message["duration"],
+            }
+
+            # Reserve the ID atomically so simultaneous duplicates are rejected.
+            with lock:
+                if job_id in seen_job_ids:
+                    duplicate = True
+                else:
+                    duplicate = False
+                    seen_job_ids.add(job_id)
                     pending_clients[job_id] = sock
 
-                jobs.put(job)
+            if duplicate:
+                send_error(
+                    sock, "DUPLICATE_JOB",
+                    f"Job ID {job_id} has already been submitted",
+                    job_id=job_id
+                )
+                continue
+
+            try:
                 send_json(sock, {
                     "type": "ACK",
+                    "ref": "JOB",
                     "job_id": job_id,
-                    "status": "queued",
                 })
-                print(f"[CLIENT] Queued job {job_id} from {address}")
+            except OSError:
+                with lock:
+                    pending_clients.pop(job_id, None)
+                    seen_job_ids.discard(job_id)
+                break
 
-            except (ValueError, TypeError, json.JSONDecodeError) as exc:
-                send_json(sock, {"type": "ERROR", "message": str(exc)})
+            jobs.put(job)
+            print(f"[CLIENT] Queued job {job_id} from {address}")
 
     except OSError as exc:
         print(f"[CLIENT] {address}: {exc}")
     finally:
-        reader.close()
-        # Keep the socket open while its job is pending.
-        # The result handler closes it after delivery, or on disconnect.
+        # The socket stays open so the result handler can deliver the result.
+        pass
 
 
 def choose_worker():
@@ -201,8 +293,10 @@ def scheduler():
 
             except OSError:
                 with lock:
-                    workers.pop(worker_id, None)
+                    if workers.get(worker_id, {}).get("socket") is state["socket"]:
+                        workers.pop(worker_id, None)
                     state["busy"] = False
+
                 report_status(f"WORKER_DOWN {worker_id}")
                 jobs.put(job)
                 break

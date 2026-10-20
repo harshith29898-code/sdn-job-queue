@@ -50,12 +50,29 @@ def main():
                 reader = sock.makefile("r", encoding="utf-8")
                 send_lock = threading.Lock()
                 stop = threading.Event()
+                busy = threading.Event()
 
                 send_message(sock, send_lock, {
                     "type": "REGISTER",
                     "worker_id": args.id,
                 })
-                print(f"[{args.id}] Registered with server")
+                # Wait for the server to acknowledge registration first.
+                line = reader.readline()
+                if not line:
+                    raise ConnectionError("Server closed before registration ACK")
+
+                response = json.loads(line)
+                if (
+                    response.get("type") == "ERROR"
+                    or response.get("type") != "ACK"
+                    or response.get("ref") != "REGISTER"
+                    or response.get("worker_id") != args.id
+                ):
+                    raise ConnectionError(
+                        f"Registration was not acknowledged: {response}"
+                    )
+
+                print(f"[{args.id}] Registration acknowledged by server")
 
                 def heartbeat():
                     while not stop.wait(2):
@@ -63,7 +80,7 @@ def main():
                             send_message(sock, send_lock, {
                                 "type": "HEARTBEAT",
                                 "worker_id": args.id,
-                                "timestamp": time.time(),
+                                "load": 1 if busy.is_set() else 0,
                             })
                         except OSError:
                             return
@@ -78,10 +95,13 @@ def main():
                     job_id = job.get("job_id")
                     print(f"[{args.id}] Executing job {job_id}")
 
+                    busy.set()
                     try:
                         result = execute_job(job)
                     except Exception as exc:
                         result = {"status": "failed", "error": str(exc)}
+                    finally:
+                        busy.clear()
 
                     send_message(sock, send_lock, {
                         "type": "RESULT",
