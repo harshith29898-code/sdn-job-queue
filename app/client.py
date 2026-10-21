@@ -39,9 +39,20 @@ def main():
             message = json.loads(line)
             print("Server:", json.dumps(message, indent=2))
 
-            if message.get("type") == "RESULT":
+            if message.get("type") == "ACK" and message.get("ref") == "JOB":
+                if message.get("job_id") != job_id:
+                    print("Unexpected ACK for a different job.")
+                    break
+                print(f"Job {job_id} accepted by server; waiting for result...")
+
+            elif message.get("type") == "RESULT":
+                if message.get("job_id") != job_id:
+                    print("Received a result for a different job.")
+                    continue
                 break
-            if message.get("type") == "ERROR":
+
+            elif message.get("type") == "ERROR":
+                print("Job submission failed.")
                 break
 
         reader.close()
