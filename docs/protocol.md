@@ -101,7 +101,7 @@ Server --JOB--> Worker --RESULT--> Server --RESULT--> Client
 Worker startup: `Worker --REGISTER--> Server --ACK--> Worker`, then HEARTBEAT every 2 s.
 
 ### 5.1 job_id allocation
-To avoid collisions between clients: c1 uses 1000+, c2 uses 2000+, c3 uses 3000+ (e.g. c2's 5th job = 2005).
+The client generates a unique positive integer `job_id` for each job. The server rejects a repeated id with `DUPLICATE_JOB`.
 
 ### 5.2 Scheduling
 Jobs go into a FIFO queue. The server assigns each job to the next **UP** worker in round-robin order (w1, w2, w3, w1, ...). Down workers are skipped.
@@ -110,7 +110,7 @@ Jobs go into a FIFO queue. The server assigns each job to the next **UP** worker
 
 - Worker sends HEARTBEAT every **2 s**.
 - Server marks a worker **DOWN** after **~6 s** with no heartbeat (or on TCP disconnect).
-- On DOWN: server requeues that worker's unfinished jobs at the front of the queue (full redistribution testing is D2; D1 only requires marking DOWN and not scheduling to it).
+- On DOWN: server requeues that worker's unfinished jobs at the back of the queue (full redistribution testing is D2; D1 only requires marking DOWN and not scheduling to it).
 - A DOWN worker that re-REGISTERs becomes UP again.
 
 ## 7. Server <-> Controller status channel (port 5002)

@@ -10,6 +10,10 @@
    5. Run the tests from c1: `c1 SERVER_HOST=10.0.0.10 python3 tests/test_d1.py -v`
 3. **Full end-to-end demo:** see section "Demo script".
 
+**Notes for running `tests/test_d1.py`:**
+- Restart the server before each run. The server remembers every `job_id` it has seen (duplicates are rejected) and keeps leftover queued jobs, so a second run against the same server process can give misleading failures.
+- Do not start real workers while `test_d1.py` is running. The tests register their own fake workers (w1-w3); real workers with the same ids would replace them and receive the test jobs.
+
 ## Test cases
 | ID  | Area | Check | Expected | Automated |
 |-----|------|-------|----------|-----------|

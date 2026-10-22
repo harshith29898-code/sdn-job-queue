@@ -60,9 +60,11 @@ def submit(r_sock, job_id, duration=1):
     s.sendall(encode({"type": "JOB", "job_id": job_id, "payload_size": 1000, "duration": duration}))
 
 _next = [int(time.time()) % 100000 * 10]
+_id_lock = threading.Lock()
 def fresh_id():
-    _next[0] += 1
-    return _next[0]
+    with _id_lock:          # tests create ids from several threads
+        _next[0] += 1
+        return _next[0]
 
 
 class TestWorkerChannel(unittest.TestCase):
@@ -74,9 +76,18 @@ class TestWorkerChannel(unittest.TestCase):
         s, r = connect(WORKER_PORT); self.addCleanup(s.close)
         s.sendall(encode({"type": "REGISTER", "worker_id": "w2"})); recv_msg(r)
         s.sendall(encode({"type": "HEARTBEAT", "worker_id": "w2", "load": 0}))
+        # Jobs requeued by earlier tests may legitimately be dispatched to this
+        # worker; only an ACK or ERROR in reply to the HEARTBEAT is a violation.
         s.settimeout(1.0)
-        with self.assertRaises(socket.timeout):
-            r.readline()
+        try:
+            while True:
+                line = r.readline()
+                if line is None:
+                    break
+                self.assertEqual(json.loads(line)["type"], "JOB",
+                                 "HEARTBEAT must get no reply, got %r" % (line,))
+        except socket.timeout:
+            pass
 
 
 class TestClientChannel(unittest.TestCase):
