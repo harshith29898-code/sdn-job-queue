@@ -56,15 +56,30 @@ def report_status(message):
         print(f"[POX] Status report failed: {exc}")
 
 
+def requeue_in_flight(state):
+    """Put a failed worker's unfinished job back on the queue.
+
+    Call with `lock` held, after the worker has been removed from `workers`.
+    Taking the job out of `state` first means two failure paths (watchdog and
+    disconnect) can never requeue the same job twice.
+    """
+    job = state.get("job")
+    if job is not None:
+        state["job"] = None
+        jobs.put(job)
+        print(f"[SCHEDULER] Job {job['job_id']} requeued (its worker failed)")
+
+
 def register_worker(worker_id, sock, send_lock):
     with lock:
         old = workers.get(worker_id)
         if old:
+            requeue_in_flight(old)
             try:
                 old["socket"].close()
             except OSError:
                 pass
-        else:
+        if worker_id not in worker_order:
             worker_order.append(worker_id)
 
         workers[worker_id] = {
@@ -72,6 +87,7 @@ def register_worker(worker_id, sock, send_lock):
             "send_lock": send_lock,
             "last_seen": time.monotonic(),
             "busy": False,
+            "job": None,  # job currently running on this worker (for requeue)
         }
 
     print(f"[WORKER] {worker_id} registered")
@@ -149,6 +165,7 @@ def handle_worker(sock, address):
                     state = workers.get(worker_id)
                     if state and state["socket"] is sock:
                         state["busy"] = False
+                        state["job"] = None
                         client = pending_clients.pop(job_id, None)
 
                 report_status(f"LOAD {worker_id} 0")
@@ -176,6 +193,7 @@ def handle_worker(sock, address):
             state = workers.get(worker_id)
             if state and state["socket"] is sock:
                 workers.pop(worker_id, None)
+                requeue_in_flight(state)
                 report_status(f"WORKER_DOWN {worker_id}")
                 print(f"[WORKER] {worker_id} disconnected")
 
@@ -252,24 +270,31 @@ def handle_client(sock, address):
 
 
 def choose_worker():
+    """Strict round-robin: start after the worker chosen last time and take the
+    first one that is registered, idle and has a fresh heartbeat. `next_worker`
+    is a position in `worker_order`, so a failed worker is simply skipped and
+    the rotation continues from where it was."""
     global next_worker
 
     with lock:
-        available = [
-            wid for wid in worker_order
-            if wid in workers
-            and not workers[wid]["busy"]
-            and time.monotonic() - workers[wid]["last_seen"]
-                <= HEARTBEAT_TIMEOUT
-        ]
+        count = len(worker_order)
+        now = time.monotonic()
 
-        if not available:
-            return None
+        for offset in range(count):
+            index = (next_worker + offset) % count
+            worker_id = worker_order[index]
+            state = workers.get(worker_id)
 
-        worker_id = available[next_worker % len(available)]
-        next_worker += 1
-        workers[worker_id]["busy"] = True
-        return worker_id, workers[worker_id]
+            if (
+                state
+                and not state["busy"]
+                and now - state["last_seen"] <= HEARTBEAT_TIMEOUT
+            ):
+                next_worker = (index + 1) % count
+                state["busy"] = True
+                return worker_id, state
+
+        return None
 
 
 def scheduler():
@@ -285,6 +310,9 @@ def scheduler():
 
             worker_id, state = selected
 
+            with lock:
+                state["job"] = job
+
             try:
                 send_json(state["socket"], job, state["send_lock"])
                 report_status(f"LOAD {worker_id} 75")
@@ -293,12 +321,16 @@ def scheduler():
 
             except OSError:
                 with lock:
+                    # If another failure path already took the job, don't requeue twice.
+                    still_ours = state["job"] is job
+                    state["job"] = None
                     if workers.get(worker_id, {}).get("socket") is state["socket"]:
                         workers.pop(worker_id, None)
                     state["busy"] = False
 
                 report_status(f"WORKER_DOWN {worker_id}")
-                jobs.put(job)
+                if still_ours:
+                    jobs.put(job)
                 break
 
         jobs.task_done()
@@ -317,7 +349,9 @@ def watchdog():
             ]
 
             for wid, sock in stale:
-                workers.pop(wid, None)
+                state = workers.pop(wid, None)
+                if state:
+                    requeue_in_flight(state)
                 print(f"[WATCHDOG] {wid} heartbeat timed out")
                 report_status(f"WORKER_DOWN {wid}")
                 try:
