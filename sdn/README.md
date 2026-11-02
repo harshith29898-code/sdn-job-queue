@@ -6,6 +6,8 @@ This folder and `topology/` hold the network side of the project: the Mininet to
 |---|---|
 | `topology/topology.py` | Mininet topology: 1 to 7 switches in several shapes, 1 to 7 clients, 1 server, 1 to 7 workers |
 | `sdn/job_status.py` | POX component that receives worker-status messages from the server on port 5002 |
+| `sdn/dynamic_switch.py` | POX learning switch that reacts to link failures (`--mode=dynamic`) or behaves like `l2_learning` (`--mode=static`, the baseline) |
+| `sdn/test_dynamic_switch.py` | Tests for `dynamic_switch.py` using fake switches, no Mininet needed |
 
 ## Network layout
 
@@ -77,22 +79,37 @@ Use two terminals.
 
 **Terminal 1: start POX**
 
-With more than one switch, the controller has to stop broadcasts from circling around loops. Start POX with link discovery, spanning tree and the learning switch:
+With more than one switch, the controller has to stop broadcasts from circling around loops and has to cope with link failures. Start POX with link discovery, spanning tree, the dynamic switch and the status channel:
 
 ```
 cd ~/pox
+PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree dynamic_switch --mode=dynamic job_status
+```
+
+Expect `Dynamic switch started in dynamic mode`, `Status channel listening on 0.0.0.0:5002`, `POX 0.7.0 (gar) is up.`, and `link detected` lines from discovery once the switches connect.
+
+`--mode` chooses how the controller behaves when a link changes:
+
+| Mode | Behaviour |
+|---|---|
+| `dynamic` | When a switch port goes down or up, discovery is told straight away to drop the links on that port (instead of waiting for its 10-15 s link timeout), spanning tree is told to recompute from the updated link table, and every switch's flow table and learned MAC table are cleared, once right away and once about 1.5 s later. |
+| `static` | Never reacts. Same forwarding as `forwarding.l2_learning`. This is the baseline for the performance comparison. |
+
+Every reaction is logged with a Unix timestamp (`t=1730000000.123`), so recovery time can be computed from the POX log.
+
+**Why the spanning tree needs a nudge.** In this POX version, discovery raises its "link removed" event *before* it deletes the link from its own table. Spanning tree recomputes at that moment with the dead link still in, so it can keep the old tree, or even leave a switch cut off with the only link to it blocked (`NO_FLOOD`), until some later link event. `dynamic_switch --mode=dynamic` calls spanning tree's update again once the table is correct. `--mode=static` does not, so it shows stock POX behaviour.
+
+Other ways to start POX that also work:
+
+```
+# stock learning switch, multi-switch (what we used before dynamic_switch; no reaction to failures)
 PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree forwarding.l2_learning job_status
-```
 
-Expect `Status channel listening on 0.0.0.0:5002`, `POX 0.7.0 (gar) is up.`, and `link detected` lines from discovery once the switches connect.
-
-For a single switch (the Delivery 1 setup) the old command still works:
-
-```
+# single switch, the Delivery 1 setup
 PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py forwarding.l2_learning job_status
 ```
 
-Always include `openflow.discovery` and `openflow.spanning_tree` when the topology has more than one switch and any loop (ring, mesh, custom with cycles). Without them, `l2_learning` lets broadcasts circulate forever.
+Always include `openflow.discovery` and `openflow.spanning_tree` when the topology has more than one switch and any loop (ring, mesh, custom with cycles). Without them, a learning switch lets broadcasts circulate forever.
 
 `forwarding.l2_multi` is not used: in our test on Python 3.14 it dropped 100% of pings, even on a 3-switch line with no loops.
 
@@ -139,6 +156,36 @@ POX should log `Worker w1 is UP`.
 
 Note: when typing at the `mininet>` prompt, Mininet replaces a bare host name like `w1` with its IP address. Keep names next to a quote mark, as above, when testing by hand. A real program sending the message is not affected.
 
+## Measuring recovery after a link failure
+
+Find a link that carries traffic. A port with `NO_FLOOD` is blocked by spanning tree, and the link between two blocked ends is the unused one:
+
+```
+mininet> sh for s in s1 s2 s3; do echo == $s; ovs-ofctl -O OpenFlow10 show $s | grep -E "\(s[0-9]-eth|config"; done
+```
+
+Then ping across it while failing it (here s1-s3, with c1 on s1 and w2 on s3). `ping -D` stamps each reply with the Unix time, which matches the `t=` stamps in the POX log. Do not press Ctrl+C while it runs.
+
+```
+mininet> c1 ping -D -i 0.2 -c 300 w2 > /tmp/run.txt &
+mininet> sh sleep 6
+mininet> link s1 s3 down
+mininet> sh sleep 62
+mininet> sh tail -4 /tmp/run.txt
+mininet> sh awk '/bytes from/ {gsub(/[][]/,"",$1); t=$1; if (prev && t-prev > 1) printf "gap %.1f s from %.3f to %.3f\n", t-prev, prev, t; prev=t}' /tmp/run.txt
+```
+
+The `gap` line is the outage. Repeat with `--mode=static` and `--mode=dynamic` for the comparison. After a run, bring the link back with `link s1 s3 up` and wait about 20 s.
+
+## Controller tests (no Mininet)
+
+```
+cd ~/sdn-job-queue
+python3 sdn/test_dynamic_switch.py
+```
+
+This starts POX itself on port 6633 (stop any running POX first) and connects fake switches to it. It takes about 90 seconds. It checks learning, flow timeouts, that static mode never reacts, that dynamic mode clears flows and learned tables within about a second of a link going down, and that in a 3-switch ring no switch is left cut off after an in-use link fails and comes back. Set `POX_DIR` if POX is not in `~/pox`. It tests the controller logic only, not Mininet or Open vSwitch.
+
 ## Status channel (server -> controller)
 
 The server opens a TCP connection to `10.0.0.254:5002` and sends plain-text lines. Each line is one message and ends with a newline (`\n`). The server may keep one connection open and send many lines, or connect per message. The controller sends no reply.
@@ -169,11 +216,10 @@ The controller keeps the latest state of each worker in `core.JobStatus.workers`
 
 - `ERROR:packet:(dns) parsing questions: ord() expected string of length 1, but int found` lines in the POX terminal come from POX's built-in DNS packet parser on newer Python versions. They are harmless and do not affect forwarding or the status channel.
 
-- With `l2_learning`, flow rules learned before a link failure keep pointing at the dead link until they time out. The Delivery 2 rerouting logic has to flush them.
+- With the stock `l2_learning`, flow rules and learned MAC entries from before a link failure keep pointing at the dead link (flows only time out after 30 s, and the MAC table is never cleared). `dynamic_switch --mode=dynamic` clears both.
 
 ## Not done yet (Delivery 2)
 
-- Rerouting when a link fails, using POX port-status and discovery events
-- Using worker load and status to change flow rules
 - Flow and port statistics monitoring
-- A static-rules baseline mode for the performance comparison
+- Using worker load and status (`WORKER_DOWN`, `LOAD`) to change flow rules
+- A script to fail and restore links for repeatable experiments
