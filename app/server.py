@@ -1,9 +1,10 @@
+
 #!/usr/bin/env python3
-"""P2: TCP job server, job queue, round-robin scheduling and POX status."""
+"""P2: TCP job server with selectable scheduling and POX status."""
 
 import os
 import sys
-import queue
+import argparse
 import socket
 import threading
 import time
@@ -19,13 +20,21 @@ POX_HOST = "10.0.0.254"
 POX_PORT = 5002
 HEARTBEAT_TIMEOUT = 6
 
-jobs = queue.Queue()
+# Scheduling configuration
+scheduler_algorithm = "fcfs"
+AGING_RATE = 1.0
+
+# Shared state
+pending_jobs = []
 lock = threading.RLock()
+condition = threading.Condition(lock)
+
 workers = {}
 pending_clients = {}
 worker_order = []
 next_worker = 0
 seen_job_ids = set()
+job_sequence = 0
 
 
 def send_json(sock, message, send_lock=None):
@@ -48,7 +57,7 @@ def send_error(sock, code, message="", job_id=None, send_lock=None):
 
 
 def report_status(message):
-    """POX expects plain-text lines, NOT JSON."""
+    """POX expects plain-text lines, not JSON."""
     try:
         with socket.create_connection((POX_HOST, POX_PORT), timeout=2) as conn:
             conn.sendall((message + "\n").encode())
@@ -57,28 +66,28 @@ def report_status(message):
 
 
 def requeue_in_flight(state):
-    """Put a failed worker's unfinished job back on the queue.
-
-    Call with `lock` held, after the worker has been removed from `workers`.
-    Taking the job out of `state` first means two failure paths (watchdog and
-    disconnect) can never requeue the same job twice.
-    """
+    """Requeue an unfinished job after worker failure."""
     job = state.get("job")
+
     if job is not None:
         state["job"] = None
-        jobs.put(job)
-        print(f"[SCHEDULER] Job {job['job_id']} requeued (its worker failed)")
+        pending_jobs.append(job)
+        print(f"[SCHEDULER] Job {job['job_id']} requeued")
+
+        condition.notify_all()
 
 
 def register_worker(worker_id, sock, send_lock):
-    with lock:
+    with condition:
         old = workers.get(worker_id)
+
         if old:
             requeue_in_flight(old)
             try:
                 old["socket"].close()
             except OSError:
                 pass
+
         if worker_id not in worker_order:
             worker_order.append(worker_id)
 
@@ -87,8 +96,10 @@ def register_worker(worker_id, sock, send_lock):
             "send_lock": send_lock,
             "last_seen": time.monotonic(),
             "busy": False,
-            "job": None,  # job currently running on this worker (for requeue)
+            "job": None,
         }
+
+        condition.notify_all()
 
     print(f"[WORKER] {worker_id} registered")
     report_status(f"WORKER_UP {worker_id}")
@@ -126,7 +137,6 @@ def handle_worker(sock, address):
 
                 worker_id = message["worker_id"]
 
-                # Send the ACK BEFORE making this worker schedulable.
                 try:
                     send_json(sock, {
                         "type": "ACK",
@@ -141,19 +151,21 @@ def handle_worker(sock, address):
             elif kind == "HEARTBEAT":
                 if worker_id is None or message["worker_id"] != worker_id:
                     send_error(
-                        sock, "BAD_VALUE", "Worker is not registered or ID mismatched",
+                        sock, "BAD_VALUE",
+                        "Worker is not registered or ID mismatched",
                         send_lock=send_lock
                     )
                     continue
 
-                with lock:
+                with condition:
                     if workers.get(worker_id, {}).get("socket") is sock:
                         workers[worker_id]["last_seen"] = time.monotonic()
 
             elif kind == "RESULT":
                 if worker_id is None or message["worker_id"] != worker_id:
                     send_error(
-                        sock, "BAD_VALUE", "Worker is not registered or ID mismatched",
+                        sock, "BAD_VALUE",
+                        "Worker is not registered or ID mismatched",
                         send_lock=send_lock
                     )
                     continue
@@ -161,12 +173,14 @@ def handle_worker(sock, address):
                 job_id = message["job_id"]
                 client = None
 
-                with lock:
+                with condition:
                     state = workers.get(worker_id)
+
                     if state and state["socket"] is sock:
                         state["busy"] = False
                         state["job"] = None
                         client = pending_clients.pop(job_id, None)
+                        condition.notify_all()
 
                 report_status(f"LOAD {worker_id} 0")
 
@@ -181,7 +195,7 @@ def handle_worker(sock, address):
             else:
                 send_error(
                     sock, "BAD_VALUE",
-                    f"Unexpected message type for worker connection: {kind}",
+                    f"Unexpected message type: {kind}",
                     send_lock=send_lock
                 )
 
@@ -189,11 +203,14 @@ def handle_worker(sock, address):
         print(f"[WORKER] {address}: {exc}")
 
     finally:
-        with lock:
+        with condition:
             state = workers.get(worker_id)
+
             if state and state["socket"] is sock:
                 workers.pop(worker_id, None)
                 requeue_in_flight(state)
+                condition.notify_all()
+
                 report_status(f"WORKER_DOWN {worker_id}")
                 print(f"[WORKER] {worker_id} disconnected")
 
@@ -201,6 +218,8 @@ def handle_worker(sock, address):
 
 
 def handle_client(sock, address):
+    global job_sequence
+
     reader = LineReader(sock)
 
     try:
@@ -223,21 +242,26 @@ def handle_client(sock, address):
                 continue
 
             job_id = message["job_id"]
+
             job = {
                 "type": "JOB",
                 "job_id": job_id,
                 "payload_size": message["payload_size"],
                 "duration": message["duration"],
+                "priority": message.get("priority", 0),
             }
 
-            # Reserve the ID atomically so simultaneous duplicates are rejected.
-            with lock:
+            with condition:
                 if job_id in seen_job_ids:
                     duplicate = True
                 else:
                     duplicate = False
                     seen_job_ids.add(job_id)
                     pending_clients[job_id] = sock
+
+                    job_sequence += 1
+                    job["_sequence"] = job_sequence
+                    job["_arrival_time"] = time.monotonic()
 
             if duplicate:
                 send_error(
@@ -254,31 +278,31 @@ def handle_client(sock, address):
                     "job_id": job_id,
                 })
             except OSError:
-                with lock:
+                with condition:
                     pending_clients.pop(job_id, None)
                     seen_job_ids.discard(job_id)
                 break
 
-            jobs.put(job)
+            with condition:
+                pending_jobs.append(job)
+                condition.notify_all()
+
             print(f"[CLIENT] Queued job {job_id} from {address}")
 
     except OSError as exc:
         print(f"[CLIENT] {address}: {exc}")
-    finally:
-        # The socket stays open so the result handler can deliver the result.
-        pass
 
 
 def choose_worker():
-    """Strict round-robin: start after the worker chosen last time and take the
-    first one that is registered, idle and has a fresh heartbeat. `next_worker`
-    is a position in `worker_order`, so a failed worker is simply skipped and
-    the rotation continues from where it was."""
+    """Round-robin selection among registered, idle workers."""
     global next_worker
 
     with lock:
         count = len(worker_order)
         now = time.monotonic()
+
+        if count == 0:
+            return None
 
         for offset in range(count):
             index = (next_worker + offset) % count
@@ -297,43 +321,96 @@ def choose_worker():
         return None
 
 
+def choose_job():
+    """Select a queued job according to the configured algorithm."""
+    if not pending_jobs:
+        return None
+
+    now = time.monotonic()
+
+    if scheduler_algorithm == "fcfs":
+        index = min(
+            range(len(pending_jobs)),
+            key=lambda i: pending_jobs[i]["_sequence"]
+        )
+
+    elif scheduler_algorithm == "sjf":
+        index = min(
+            range(len(pending_jobs)),
+            key=lambda i: (
+                pending_jobs[i]["duration"],
+                pending_jobs[i]["_sequence"]
+            )
+        )
+
+    elif scheduler_algorithm == "priority":
+        # Higher base priority and longer waiting time increase the score.
+        index = max(
+            range(len(pending_jobs)),
+            key=lambda i: (
+                pending_jobs[i]["priority"]
+                + (now - pending_jobs[i]["_arrival_time"]) * AGING_RATE,
+                -pending_jobs[i]["_sequence"]
+            )
+        )
+
+    else:
+        raise ValueError(f"Unknown scheduling algorithm: {scheduler_algorithm}")
+
+    return pending_jobs.pop(index)
+
+
 def scheduler():
     while True:
-        job = jobs.get()
+        with condition:
+            while not pending_jobs or not any(
+                not state["busy"]
+                and time.monotonic() - state["last_seen"] <= HEARTBEAT_TIMEOUT
+                for state in workers.values()
+            ):
+                condition.wait(timeout=0.5)
 
-        while True:
+            job = choose_job()
             selected = choose_worker()
 
-            if selected is None:
-                time.sleep(0.5)
+            if job is None or selected is None:
+                if job is not None:
+                    pending_jobs.append(job)
                 continue
 
             worker_id, state = selected
+            state["job"] = job
 
-            with lock:
-                state["job"] = job
+        # Do not send internal queue metadata to the worker.
+        worker_job = {
+            key: value for key, value in job.items()
+            if not key.startswith("_")
+        }
 
-            try:
-                send_json(state["socket"], job, state["send_lock"])
-                report_status(f"LOAD {worker_id} 75")
-                print(f"[SCHEDULER] Job {job['job_id']} -> {worker_id}")
-                break
+        try:
+            send_json(state["socket"], worker_job, state["send_lock"])
+            report_status(f"LOAD {worker_id} 75")
 
-            except OSError:
-                with lock:
-                    # If another failure path already took the job, don't requeue twice.
-                    still_ours = state["job"] is job
-                    state["job"] = None
-                    if workers.get(worker_id, {}).get("socket") is state["socket"]:
-                        workers.pop(worker_id, None)
-                    state["busy"] = False
+            print(
+                f"[SCHEDULER] {scheduler_algorithm.upper()}: "
+                f"Job {job['job_id']} -> {worker_id}"
+            )
 
-                report_status(f"WORKER_DOWN {worker_id}")
+        except OSError:
+            with condition:
+                still_ours = state["job"] is job
+                state["job"] = None
+                state["busy"] = False
+
+                if workers.get(worker_id, {}).get("socket") is state["socket"]:
+                    workers.pop(worker_id, None)
+
                 if still_ours:
-                    jobs.put(job)
-                break
+                    pending_jobs.append(job)
 
-        jobs.task_done()
+                condition.notify_all()
+
+            report_status(f"WORKER_DOWN {worker_id}")
 
 
 def watchdog():
@@ -341,7 +418,7 @@ def watchdog():
         time.sleep(1)
         now = time.monotonic()
 
-        with lock:
+        with condition:
             stale = [
                 (wid, state["socket"])
                 for wid, state in workers.items()
@@ -350,14 +427,19 @@ def watchdog():
 
             for wid, sock in stale:
                 state = workers.pop(wid, None)
+
                 if state:
                     requeue_in_flight(state)
+
                 print(f"[WATCHDOG] {wid} heartbeat timed out")
                 report_status(f"WORKER_DOWN {wid}")
+
                 try:
                     sock.shutdown(socket.SHUT_RDWR)
                 except OSError:
                     pass
+
+            condition.notify_all()
 
 
 def listen(port, handler, name):
@@ -365,20 +447,51 @@ def listen(port, handler, name):
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(("0.0.0.0", port))
     server.listen()
+
     print(f"[SERVER] {name} listening on port {port}")
 
     while True:
         conn, address = server.accept()
         threading.Thread(
-            target=handler, args=(conn, address), daemon=True
+            target=handler,
+            args=(conn, address),
+            daemon=True
         ).start()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="SDN Job Queue Server")
+    parser.add_argument(
+        "--algorithm",
+        choices=["fcfs", "sjf", "priority"],
+        default="fcfs",
+        help="Job scheduling algorithm"
+    )
+    parser.add_argument(
+        "--aging-rate",
+        type=float,
+        default=AGING_RATE,
+        help="Priority points gained per second while waiting"
+    )
+
+    args = parser.parse_args()
+
+    if args.aging_rate < 0:
+        parser.error("--aging-rate cannot be negative")
+
+    scheduler_algorithm = args.algorithm
+    AGING_RATE = args.aging_rate
+
+    print(f"[SCHEDULER] Algorithm: {scheduler_algorithm.upper()}")
+    print(f"[SCHEDULER] Aging rate: {AGING_RATE} priority points/second")
+
     threading.Thread(target=scheduler, daemon=True).start()
     threading.Thread(target=watchdog, daemon=True).start()
+
     threading.Thread(
-        target=listen, args=(CLIENT_PORT, handle_client, "Clients"),
+        target=listen,
+        args=(CLIENT_PORT, handle_client, "Clients"),
         daemon=True
     ).start()
+
     listen(WORKER_PORT, handle_worker, "Workers")
