@@ -35,7 +35,7 @@ Usage (needs root for the real network, uses the system python3):
 Start POX first, in another terminal (see sdn/README.md):
     cd ~/pox
     PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree \
-        forwarding.l2_learning job_status
+        dynamic_switch --mode=dynamic job_status
 """
 import argparse
 import itertools
