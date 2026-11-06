@@ -7,6 +7,8 @@ This folder and `topology/` hold the network side of the project: the Mininet to
 | `topology/topology.py` | Mininet topology: 1 to 7 switches in several shapes, 1 to 7 clients, 1 server, 1 to 7 workers |
 | `sdn/job_status.py` | POX component that receives worker-status messages from the server on port 5002 |
 | `sdn/dynamic_switch.py` | POX learning switch that reacts to link failures (`--mode=dynamic`) or behaves like `l2_learning` (`--mode=static`, the baseline) |
+| `topology/linkctl.py` | Fails and restores links of the running network from a script, with timestamps (see below) |
+| `topology/test_linkctl.py` | Tests for `linkctl.py`, no Mininet or root needed |
 | `sdn/test_dynamic_switch.py` | Tests for `dynamic_switch.py` using fake switches, no Mininet needed |
 
 ## Network layout
@@ -177,6 +179,31 @@ mininet> sh awk '/bytes from/ {gsub(/[][]/,"",$1); t=$1; if (prev && t-prev > 1)
 
 The `gap` line is the outage. Repeat with `--mode=static` and `--mode=dynamic` for the comparison. After a run, bring the link back with `link s1 s3 up` and wait about 20 s.
 
+## Failing links from a script (`linkctl.py`)
+
+`topology.py` writes the real links and interface names of the running network to `/tmp/sdn-topology-state.json` (set `SDN_TOPO_STATE` to change the path) and removes it when it exits. `topology/linkctl.py` reads that file and brings the interfaces up or down with `ip link set`, which is the same thing the Mininet command `link s1 s3 down` does. Run it in a second terminal while `topology.py` is running:
+
+```
+sudo python3 topology/linkctl.py list                      # the links of the running network
+sudo python3 topology/linkctl.py down s1 s3                # fail a link (also: down s1-s3)
+sudo python3 topology/linkctl.py up s1 s3                  # restore it
+sudo python3 topology/linkctl.py flap s1 s3 --after 10 --for 30
+sudo python3 topology/linkctl.py down c1 s1                # cut a host off (any link works)
+sudo python3 topology/linkctl.py down root s1              # cut the VM off from s1 (POX status channel)
+```
+
+`flap` waits `--after` seconds, fails the link, waits `--for` seconds, then restores it (it also restores it if you press Ctrl+C during the wait). Add `--log FILE` to append the output to a file, or `--dry-run` to print the commands without running them.
+
+Every action prints a Unix timestamp that matches the `t=` stamps in the POX log and the times from `ping -D`:
+
+```
+t=1730000000.123 link s1-s3 DOWN (interfaces: s1-eth2, s3-eth2)
+```
+
+An experiment script can start a `ping -D` or a job run, call `linkctl.py flap ...`, and compute the outage from the timestamps. Unlike the Mininet CLI, `linkctl.py` can be started from a script or another terminal.
+
+To check the tool itself without Mininet or root: `python3 topology/test_linkctl.py`.
+
 ## Controller tests (no Mininet)
 
 ```
@@ -222,4 +249,3 @@ The controller keeps the latest state of each worker in `core.JobStatus.workers`
 
 - Flow and port statistics monitoring
 - Using worker load and status (`WORKER_DOWN`, `LOAD`) to change flow rules
-- A script to fail and restore links for repeatable experiments
