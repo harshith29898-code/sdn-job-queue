@@ -2,24 +2,26 @@
 
 Distributed job queue with TCP sockets and an SDN controller.
 
-Clients submit jobs to a central server over TCP. The server queues them and hands them to worker nodes in round-robin order. Everything runs on a Mininet network whose forwarding is managed by a POX SDN controller, and the server reports worker status to the controller.
+Clients submit jobs to a central server over TCP. The server queues them and hands them to worker nodes. Everything runs on a Mininet network whose forwarding is managed by a POX SDN controller. The server reports worker status to the controller, and the controller reacts to link failures by recomputing paths.
 
 > The server decides *who* does the work. The controller decides *how packets travel*.
 
 ```
-clients c1..c3 --TCP:5000--> [ switch s1 ] --TCP:5000/5001--> server --TCP:5001--> workers w1..w3
-                                   ^                             |
-                       OpenFlow    |                             | TCP:5002 (status lines)
-                                   +------ POX controller <------+
+clients c1..c7 --TCP:5000--> [ switches s1..s7 ] --TCP:5000/5001--> server --TCP:5001--> workers w1..w7
+                                     ^                                |
+                         OpenFlow    |                                | TCP:5002 (status lines)
+                                     +-------- POX controller <-------+
 ```
+
+The number of clients, workers and switches (1 to 7 each) and the switch layout are chosen when the topology starts.
 
 ## Team
 
 | Role | Part | Who |
 |---|---|---|
-| P1 | Mininet topology, POX controller, status listener | Harshith |
+| P1 | Mininet topology, POX controller (dynamic switch, status listener), SDN experiments | Harshith |
 | P2 | Client, server, worker, job queue, scheduling | Nikitha |
-| P3 | Protocol, integration, tests | Nishad |
+| P3 | Protocol, integration, tests, docs, GUI framework, experiments | Nishad |
 
 ## Repository layout
 
@@ -28,7 +30,8 @@ sdn-job-queue/
 ├── README.md          this file
 ├── common.py          shared ports, addresses, timeouts and message helpers
 ├── app/               client.py, server.py, worker.py
-├── sdn/               job_status.py (POX status listener) and its README
+├── sdn/               dynamic_switch.py (POX switch, dynamic or static mode),
+│                      job_status.py (POX status listener), test_dynamic_switch.py
 ├── topology/          topology.py (Mininet topology)
 ├── tests/             test_d1.py, reference_server.py
 └── docs/              architecture.md, protocol.md, TEST_PLAN.md
@@ -48,14 +51,16 @@ POX prints a warning that it officially supports Python 3.6 to 3.9. It runs fine
 
 Use two terminals. Start POX first.
 
-**Terminal 1: POX with the forwarding and status components**
+**Terminal 1: POX with discovery, spanning tree, the switch and the status listener**
 
 ```
 cd ~/pox
-PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py forwarding.l2_learning job_status
+PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree dynamic_switch --mode=dynamic job_status
 ```
 
 Expect `Status channel listening on 0.0.0.0:5002` and `POX 0.7.0 (gar) is up.`
+
+`--mode=dynamic` reacts to link failures. `--mode=static` is the stock learning-switch behaviour and is used as the baseline in the performance comparison (see below).
 
 **Terminal 2: the network (run from the repo root)**
 
@@ -64,15 +69,17 @@ cd ~/sdn-job-queue
 sudo python3 topology/topology.py
 ```
 
+Run `python3 topology/topology.py --help` for all options. The topology can be checked without Mininet using `--dry-run`.
+
 At the `mininet>` prompt, check connectivity:
 
 ```
 pingall
 ```
 
-Expect `0% dropped (42/42 received)`.
+Expect `0% dropped`.
 
-**Start the server, then the three workers** (paste one line at a time):
+**Start the server, then the workers** (paste one line at a time):
 
 ```
 server python3 -u app/server.py > /tmp/server.log 2>&1 &
@@ -103,7 +110,28 @@ POX shows `Worker w1 is DOWN`, and the next job goes to a live worker (w2 here).
 
 **Shut down:** type `exit` at the `mininet>` prompt, press Ctrl+C in the POX terminal, and run `sudo mn -c` if Mininet is left in a bad state.
 
-> At the `mininet>` prompt, a bare host name such as `w1` is replaced by its IP address. That is why the worker id is written `--id=w1`.
+> At the `mininet>` prompt, a bare host name such as `w1` is replaced by its IP address. That is why the worker id is written `--id=w1`. Also put separate commands on separate lines: do not chain them with `&`.
+
+## Link failures and the static baseline
+
+On a topology with redundant links (for example a ring of 3 switches), the two POX modes behave differently when a link goes down:
+
+- **dynamic**: drops discovery links at once, recomputes the spanning tree, and flushes flows and MAC tables.
+- **static**: stock behaviour. POX discovery announces "link removed" before it deletes the link, so the spanning tree can leave a switch cut off.
+
+Measured on a 3-switch ring, with `ping -D` every 0.2 s and one link failed:
+
+| Mode | Result |
+|---|---|
+| static | connectivity lost for 37.5 s, or until the run ended |
+| dynamic | 1 of 300 packets lost |
+
+This is a small sample (one topology, a few runs), so treat it as an indication, not a benchmark. The 20 unit tests in `sdn/test_dynamic_switch.py` use fake switches and all pass:
+
+```
+cd ~/sdn-job-queue
+python3 sdn/test_dynamic_switch.py -v
+```
 
 ## Running the tests
 
@@ -121,15 +149,15 @@ Expect T01 to T12 `ok`, T13 skipped, and `OK (skipped=1)`. For the slow failure 
 c1 RUN_SLOW=1 SERVER_HOST=10.0.0.10 python3 tests/test_d1.py -v
 ```
 
-Expect all 13 `ok` and `OK`. The full test list and the demo script are in [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md).
+Expect all 13 `ok` and `OK`. These pass on a 3-switch ring and on a single switch. The full test list and the demo script are in [`docs/TEST_PLAN.md`](docs/TEST_PLAN.md).
 
 ## Addresses and ports
 
 | Host | IP |
 |---|---|
-| c1, c2, c3 | 10.0.0.1, 10.0.0.2, 10.0.0.3 |
+| c1 to c7 | 10.0.0.1 to 10.0.0.7 |
 | server | 10.0.0.10 |
-| w1, w2, w3 | 10.0.0.21, 10.0.0.22, 10.0.0.23 |
+| w1 to w7 | 10.0.0.21 to 10.0.0.27 |
 | VM (where POX runs) | 10.0.0.254 |
 
 | Port | Use |
@@ -152,9 +180,13 @@ Programs running inside Mininet hosts must use `10.0.0.254` to reach POX, never 
 
 - `ERROR:packet:(dns) parsing ...` lines in the POX terminal come from POX's built-in DNS parser on newer Python versions. They are harmless.
 - `LOAD` is a busy/idle flag (75 or 0), not a measured load.
+- `forwarding.l2_multi` dropped every ping on our VM, so the switch logic is `sdn/dynamic_switch.py` instead.
+- Not yet tested on real Mininet: link failure on a 7-switch mesh, `--topo custom`, and `--link-bw`, `--link-delay`, `--link-loss`.
 
 ## Status
 
 **Delivery 1:** complete. 1 switch, 3 clients, server, 3 workers, POX forwarding, status channel, automated and manual tests.
 
-**Delivery 2 (planned):** redundant switches and links, load monitoring, dynamic path control and rerouting, link-failure scenario, performance comparison against a static baseline.
+**Delivery 2, done:** variable numbers of clients, workers and switches; topology shapes (line, ring, star, tree, mesh, custom); dynamic and static POX modes; link-failure comparison on a 3-switch ring.
+
+**Delivery 2, in progress:** scripted link failure and restore, scheduling algorithms and dynamic worker registration, flow and port statistics, allow-list filtering, GUI, wider performance evaluation.
