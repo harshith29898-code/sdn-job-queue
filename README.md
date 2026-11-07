@@ -181,7 +181,7 @@ Programs running inside Mininet hosts must use `10.0.0.254` to reach POX, never 
 - `ERROR:packet:(dns) parsing ...` lines in the POX terminal come from POX's built-in DNS parser on newer Python versions. They are harmless.
 - `LOAD` is a busy/idle flag (75 or 0), not a measured load.
 - `forwarding.l2_multi` dropped every ping on our VM, so the switch logic is `sdn/dynamic_switch.py` instead.
-- Not yet tested on real Mininet: link failure on a 7-switch mesh, `--topo custom`, and `--link-bw`, `--link-delay`, `--link-loss`.
+- Tested on real Mininet: link failure on a 7-switch mesh, `--topo custom`, `--link-delay`, `--link-bw` and `--link-loss`. Mininet's built-in `iperf` command hung on our VM, so measure bandwidth with `iperf -s -p 6001` and `iperf -c <ip> -p 6001 -t 5`. Port 5001 is refused for non-worker IPs when the allow-list is on.
 
 ## Status
 
