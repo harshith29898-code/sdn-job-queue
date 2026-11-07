@@ -32,6 +32,10 @@ Usage (needs root for the real network, uses the system python3):
     sudo python3 topology/topology.py --test                # wait, run pingall (retrying), exit 0 or 1
     sudo python3 topology/topology.py --switches 1          # the Delivery 1 layout
 
+While the network runs, links can be failed and restored from another terminal with
+topology/linkctl.py (it reads the interface names this script writes to a state file):
+    sudo python3 topology/linkctl.py flap s1 s3 --after 10 --for 30
+
 Start POX first, in another terminal (see sdn/README.md):
     cd ~/pox
     PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree \
@@ -39,6 +43,7 @@ Start POX first, in another terminal (see sdn/README.md):
 """
 import argparse
 import itertools
+import json
 import os
 import sys
 import time
@@ -269,6 +274,34 @@ def build_network(num_clients, num_workers, controller_ip, controller_port, atta
     return net
 
 
+STATE_FILE = os.environ.get("SDN_TOPO_STATE", "/tmp/sdn-topology-state.json")
+
+
+def write_state(net, path=STATE_FILE):
+    """Record the real links and interface names of the running network.
+
+    topology/linkctl.py reads this file to fail and restore links from a script.
+    "toggle" lists the interfaces of a link that live in the VM's own namespace
+    (switch ports and the root attachment); host-side interfaces are inside the
+    hosts' namespaces and come down by themselves when their peer does."""
+    links = []
+    for link in net.links:
+        links.append({
+            "a": link.intf1.node.name, "a_if": link.intf1.name,
+            "b": link.intf2.node.name, "b_if": link.intf2.name,
+            "toggle": [i.name for i in (link.intf1, link.intf2) if not i.node.inNamespace],
+        })
+    with open(path, "w") as f:
+        json.dump({"started": time.time(), "links": links}, f, indent=1)
+
+
+def remove_state(path=STATE_FILE):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
 def set_link_state(net, a, b, up):
     """Bring the link between switches a and b (numbers) up or down.
     Same as typing 'link s1 s2 down' at the mininet> prompt; for failure scripts."""
@@ -350,6 +383,11 @@ def main():
         info("*** WARNING: not every switch connected to POX. "
              "Is POX running on %s:%d?\n" % (args.controller_ip, args.controller_port))
 
+    try:
+        write_state(net)
+    except (OSError, AttributeError) as e:
+        info("*** WARNING: could not write %s (linkctl.py will not work): %s\n" % (STATE_FILE, e))
+
     ok = True
     try:
         if args.test:
@@ -357,6 +395,7 @@ def main():
         else:
             CLI(net)
     finally:
+        remove_state()
         net.stop()
     if args.test:
         sys.exit(0 if ok else 1)
