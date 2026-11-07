@@ -21,6 +21,17 @@ Modes (--mode=...):
               (stale flows survive until they time out). It is the baseline
               for the performance comparison.
 
+Allow-list (off by default, works in both modes):
+    --allowlist           only the client IPs may open TCP port 5000 and only
+                          the worker IPs may open TCP port 5001 (defaults:
+                          clients 10.0.0.1-7, workers 10.0.0.21-27)
+    --clients=IP,IP,...   replace the allowed client IPs (implies --allowlist)
+    --workers=IP,IP,...   replace the allowed worker IPs (implies --allowlist)
+    The check is done on the first packet of each new connection, before any
+    flow is installed, so flushes never remove it. A refused connection gets a
+    10 s drop flow and a "BLOCKED" line in the log. tests/test_d1.py registers
+    fake workers from c1, so run it without --allowlist.
+
 Run it together with discovery and spanning tree (see sdn/README.md):
     cd ~/pox
     PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery \\
@@ -35,6 +46,9 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpid_to_str
 
+from allowlist_policy import (AllowList, parse_ip_list, DEFAULT_CLIENTS,
+                              DEFAULT_WORKERS, CLIENT_PORT, WORKER_PORT)
+
 log = core.getLogger()
 
 MODES = ("dynamic", "static")
@@ -42,10 +56,13 @@ IDLE_TIMEOUT = 10      # same as l2_learning
 HARD_TIMEOUT = 30      # same as l2_learning
 FLUSH_BATCH_DELAY = 0.2    # seconds: gather the events of one change into one flush
 FLUSH_AGAIN_DELAY = 1.5    # seconds: flush again after spanning tree has moved its ports
+ALLOWLIST_DROP_SECONDS = 10    # how long a refused connection stays dropped in the switch
 
 
 class SwitchBrain(object):
     """The learning logic for one OpenFlow switch (a copy of l2_learning's)."""
+
+    allowlist = None        # an AllowList, set by DynamicSwitch when enabled
 
     def __init__(self, connection):
         self.connection = connection
@@ -61,6 +78,21 @@ class SwitchBrain(object):
         discovery = getattr(core, "openflow_discovery", None)
         if discovery is not None:
             discovery.install_flow(self.connection)
+
+    def _refused_by_allowlist(self, packet, event):
+        """True if this is a TCP packet to port 5000/5001 from an IP that is
+        not allowed. Logs it. Other traffic is never refused here."""
+        ip = packet.find("ipv4")
+        tcp = packet.find("tcp")
+        if ip is None or tcp is None:
+            return False
+        reason = self.allowlist.check(str(ip.srcip), tcp.dstport)
+        if reason is None:
+            return False
+        log.warning("t=%.3f BLOCKED %s -> %s:%d on %s.%d (%s)", time.time(),
+                    ip.srcip, ip.dstip, tcp.dstport,
+                    dpid_to_str(event.dpid), event.port, reason)
+        return True
 
     def _handle_PacketIn(self, event):
         packet = event.parsed
@@ -95,6 +127,11 @@ class SwitchBrain(object):
             drop()
             return
 
+        # Allow-list: before anything is flooded or any flow is installed
+        if self.allowlist is not None and self._refused_by_allowlist(packet, event):
+            drop(ALLOWLIST_DROP_SECONDS)
+            return
+
         if packet.dst.is_multicast or packet.dst not in self.macToPort:
             flood()
             return
@@ -118,8 +155,9 @@ class SwitchBrain(object):
 class DynamicSwitch(object):
     """Creates a SwitchBrain per switch and handles the topology reactions."""
 
-    def __init__(self, mode):
+    def __init__(self, mode, allowlist=None):
         self.mode = mode
+        self.allowlist = allowlist      # an AllowList, or None (off)
         self.brains = {}        # dpid -> SwitchBrain
         self.link_up = {}       # (dpid, port_no) -> bool, last known link state
         self._flush_pending = False
@@ -133,11 +171,17 @@ class DynamicSwitch(object):
                                    "(put it before dynamic_switch on the command line)")
             discovery.addListenerByName("LinkEvent", self._handle_LinkEvent)
         log.info("Dynamic switch started in %s mode", mode)
+        if allowlist is not None:
+            log.info("Allow-list ON: port %d only from %s; port %d only from %s",
+                     CLIENT_PORT, ",".join(sorted(allowlist.clients)),
+                     WORKER_PORT, ",".join(sorted(allowlist.workers)))
 
     # ---- switches coming and going ----
 
     def _handle_ConnectionUp(self, event):
-        self.brains[event.dpid] = SwitchBrain(event.connection)
+        brain = SwitchBrain(event.connection)
+        brain.allowlist = self.allowlist
+        self.brains[event.dpid] = brain
         for port in event.connection.ports.values():
             if port.port_no < of.OFPP_MAX:
                 self.link_up[(event.dpid, port.port_no)] = not (port.state & of.OFPPS_LINK_DOWN)
@@ -226,8 +270,24 @@ class DynamicSwitch(object):
         log.info("t=%.3f flushed %d switches: %s", time.time(), len(self.brains), reason)
 
 
-def launch(mode="dynamic"):
-    """POX entry point. Option: --mode=dynamic (default) or --mode=static"""
+def _truthy(value):
+    return str(value).strip().lower() not in ("", "false", "0", "no", "off")
+
+
+def launch(mode="dynamic", allowlist=False, clients=None, workers=None):
+    """POX entry point. Options:
+        --mode=dynamic (default) or --mode=static
+        --allowlist            turn the allow-list on with the default IPs
+        --clients=IP,IP,...    allowed client IPs (turns the allow-list on)
+        --workers=IP,IP,...    allowed worker IPs (turns the allow-list on)"""
     if mode not in MODES:
         raise RuntimeError("--mode must be one of: %s" % ", ".join(MODES))
-    core.registerNew(DynamicSwitch, mode)
+    policy = None
+    if _truthy(allowlist) or clients is not None or workers is not None:
+        try:
+            policy = AllowList(
+                DEFAULT_CLIENTS if clients is None else parse_ip_list(clients, "--clients"),
+                DEFAULT_WORKERS if workers is None else parse_ip_list(workers, "--workers"))
+        except ValueError as e:
+            raise RuntimeError(str(e))
+    core.registerNew(DynamicSwitch, mode, policy)
