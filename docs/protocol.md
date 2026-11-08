@@ -1,4 +1,4 @@
-# protocol.md — Distributed Job Queue & Worker Management (Delivery 1)
+# protocol.md — Distributed Job Queue & Worker Management (Delivery 1, extended for Delivery 2)
 
 Owner: P3. Status: **PROPOSED — agree as a team before coding against it.**
 Core idea: the **SERVER** decides *who* does the work; the **CONTROLLER (POX)** decides *how packets travel*.
@@ -48,6 +48,9 @@ All connections are long-lived TCP. The server listens on `0.0.0.0` for 5000 and
 | job_id       | int   | > 0, globally unique (see 5.1)                     |
 | payload_size | int   | 0..1000000, size of dummy payload / work units     |
 | duration     | int/float | 0 < duration <= 60, seconds of CPU work        |
+| priority     | int   | optional, 0..10, default 0 (10 = most urgent). Only the `priority` scheduler uses it (see 5.2) |
+
+When the server forwards a job to a worker it adds one field, `dispatch_timestamp` (Unix time in seconds, a float, taken just before sending). Workers ignore it. The same time is printed in the server log line `Job <id> -> <worker> (dispatched at <time>)`, so waiting time (arrival to dispatch) can be worked out from the log.
 
 Job semantics: the worker performs a CPU-bound busy loop for `duration` seconds, scaled by `payload_size` work (implementation detail owned by P2; the result must not depend on it).
 
@@ -104,7 +107,18 @@ Worker startup: `Worker --REGISTER--> Server --ACK--> Worker`, then HEARTBEAT ev
 The client generates a unique positive integer `job_id` for each job. The server rejects a repeated id with `DUPLICATE_JOB`.
 
 ### 5.2 Scheduling
-Jobs go into a FIFO queue. The server assigns each job to the next **UP** worker in round-robin order (w1, w2, w3, w1, ...). Down workers are skipped.
+Each worker runs **one job at a time**. Two decisions are made whenever a worker is idle and a job is waiting:
+
+1. **Which worker:** the next idle, **UP** worker in round-robin order (w1, w2, w3, w1, ...). Down or busy workers are skipped.
+2. **Which job:** chosen from the waiting jobs by the algorithm given to the server with `--scheduler`:
+
+| Algorithm | Picks the job with | Notes |
+|-----------|--------------------|-------|
+| `fcfs` (default) | the earliest arrival | first come, first served |
+| `sjf` | the smallest `duration` (ties: earliest arrival) | short jobs go first; long jobs can wait a long time |
+| `priority` | the highest `priority + waiting_seconds x aging_rate` (ties: earliest arrival) | `--aging-rate` sets the points gained per second of waiting (default 1.0, must be >= 0) |
+
+**Aging** means a job's score rises the longer it waits, so a low-priority job eventually overtakes newer high-priority jobs and cannot be starved. With `--aging-rate 0` the highest priority always wins. If every job has the same priority, `priority` behaves like `fcfs`.
 
 ## 6. Heartbeat and failure rules
 
@@ -121,16 +135,26 @@ Plain text, one command per line, `\n`-terminated. Server is the TCP client; POX
 |-------------------|---------|--------------------------------------------|
 | `WORKER_UP w1`    | server  | worker registered / came back              |
 | `WORKER_DOWN w1`  | server  | worker missed heartbeats or disconnected   |
-| `LOAD w1 75`      | server  | load of w1, integer 0-100 (percent)        |
+| `LOAD w1 100`     | server  | load of w1, integer 0-100: 0 = idle, 100 = busy (it runs one job at a time) |
 
 POX sends no reply. The server must not wait for one.
 
-D1 requirement: POX receives and logs these lines. D2 uses them to drive rerouting. If POX is unreachable the server logs a warning and keeps working (reconnect every 5 s).
+The server sends `LOAD` when it hands a job to a worker, when the worker finishes, and for each heartbeat (the worker reports how many jobs it is running, and the server sends that number x 100, capped at 100). Each line is sent on its own short connection to port 5002. D1 requirement: POX receives and logs these lines. D2 uses them to drive routing decisions. If POX is unreachable the server logs a warning and keeps working.
 
 ## 8. D1 scope vs D2
 
 **D1:** 1 switch, 3 clients, 1 server, 3 workers, POX connected, job queue, round-robin, REGISTER + HEARTBEAT, server->controller status, end-to-end test.
 **D2:** multiple switches/redundant paths, load monitoring, dynamic path control, link/worker failure handling, rerouting, requeue/redistribute, performance experiments.
+
+D2 changes to this protocol: optional `priority` in JOB (4.1), `dispatch_timestamp` added by the server (4.1), selectable scheduling algorithms (5.2), and `LOAD` values of 0 or 100 (7).
+
+## 10. Test and measurement tools
+
+| Tool | What it does |
+|------|--------------|
+| `tests/test_d1.py` | 13 protocol tests (registration, ACK/RESULT, round-robin, bad input, TCP framing, worker failure). Run it against a fresh server with no real workers running. |
+| `tests/test_scheduling.py` | 10 tests that start the real server with each algorithm and check the order jobs are picked (fcfs, sjf, priority, aging) and that bad `priority` or `--aging-rate` values are rejected. Needs no Mininet or POX. |
+| `app/load_generator.py` | Sends jobs at random intervals (uniform or exponential gaps, optional long idle gap, random priorities, fixed `--seed` for repeatable runs) and writes one CSV row per job: `label, run_id, seq, job_id, planned_gap_s, duration_s, priority, payload_size, submit_time, ack_time, result_time, worker_id, status, error, ack_latency_s, completion_s, extra_delay_s`. Times are Unix seconds, so they line up with POX `t=` stamps and `topology/linkctl.py --log`. |
 
 ## 9. Shared definitions
 All constants and encode/decode helpers live in `common.py`. Do not hardcode IPs, ports or timeouts elsewhere: `from common import *`.
