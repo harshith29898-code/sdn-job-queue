@@ -1,10 +1,10 @@
-
 #!/usr/bin/env python3
 """P2: TCP job server with selectable scheduling and POX status."""
 
 import os
 import sys
 import argparse
+import math
 import socket
 import threading
 import time
@@ -39,7 +39,9 @@ job_sequence = 0
 
 def send_json(sock, message, send_lock=None):
     import json
+
     data = (json.dumps(message) + "\n").encode()
+
     if send_lock:
         with send_lock:
             sock.sendall(data)
@@ -49,6 +51,7 @@ def send_json(sock, message, send_lock=None):
 
 def send_error(sock, code, message="", job_id=None, send_lock=None):
     data = make_error(code, message, job_id)
+
     if send_lock:
         with send_lock:
             sock.sendall(data)
@@ -57,12 +60,17 @@ def send_error(sock, code, message="", job_id=None, send_lock=None):
 
 
 def report_status(message):
-    """POX expects plain-text lines, not JSON."""
+    """Send a plain-text status update to the POX controller."""
     try:
         with socket.create_connection((POX_HOST, POX_PORT), timeout=2) as conn:
             conn.sendall((message + "\n").encode())
     except OSError as exc:
         print(f"[POX] Status report failed: {exc}")
+
+
+def load_percentage(worker_load):
+    """Convert the worker's binary load (0 or 1) to a POX percentage."""
+    return min(worker_load * 100, 100)
 
 
 def requeue_in_flight(state):
@@ -71,9 +79,10 @@ def requeue_in_flight(state):
 
     if job is not None:
         state["job"] = None
+        state["busy"] = False
+        state["load"] = 0
         pending_jobs.append(job)
         print(f"[SCHEDULER] Job {job['job_id']} requeued")
-
         condition.notify_all()
 
 
@@ -83,6 +92,7 @@ def register_worker(worker_id, sock, send_lock):
 
         if old:
             requeue_in_flight(old)
+
             try:
                 old["socket"].close()
             except OSError:
@@ -96,6 +106,7 @@ def register_worker(worker_id, sock, send_lock):
             "send_lock": send_lock,
             "last_seen": time.monotonic(),
             "busy": False,
+            "load": 0,
             "job": None,
         }
 
@@ -113,6 +124,7 @@ def handle_worker(sock, address):
     try:
         while True:
             line = reader.readline()
+
             if line is None:
                 break
 
@@ -120,7 +132,10 @@ def handle_worker(sock, address):
                 message = decode(line)
             except ProtocolError as exc:
                 try:
-                    send_error(sock, exc.code, exc.message, send_lock=send_lock)
+                    send_error(
+                        sock, exc.code, exc.message,
+                        send_lock=send_lock
+                    )
                 except OSError:
                     break
                 continue
@@ -157,9 +172,22 @@ def handle_worker(sock, address):
                     )
                     continue
 
+                worker_load = message["load"]
+                should_report = False
+
                 with condition:
-                    if workers.get(worker_id, {}).get("socket") is sock:
-                        workers[worker_id]["last_seen"] = time.monotonic()
+                    state = workers.get(worker_id)
+
+                    if state and state["socket"] is sock:
+                        state["last_seen"] = time.monotonic()
+                        state["load"] = worker_load
+                        should_report = True
+
+                # Keep scheduler-owned busy state separate from heartbeat load.
+                if should_report:
+                    report_status(
+                        f"LOAD {worker_id} {load_percentage(worker_load)}"
+                    )
 
             elif kind == "RESULT":
                 if worker_id is None or message["worker_id"] != worker_id:
@@ -172,15 +200,30 @@ def handle_worker(sock, address):
 
                 job_id = message["job_id"]
                 client = None
+                accepted_result = False
 
                 with condition:
                     state = workers.get(worker_id)
 
                     if state and state["socket"] is sock:
-                        state["busy"] = False
-                        state["job"] = None
-                        client = pending_clients.pop(job_id, None)
-                        condition.notify_all()
+                        assigned_job = state.get("job")
+
+                        if assigned_job and assigned_job["job_id"] == job_id:
+                            state["busy"] = False
+                            state["load"] = 0
+                            state["job"] = None
+                            client = pending_clients.pop(job_id, None)
+                            accepted_result = True
+                            condition.notify_all()
+
+                if not accepted_result:
+                    send_error(
+                        sock, "BAD_VALUE",
+                        f"Job {job_id} was not assigned to this worker",
+                        job_id=job_id,
+                        send_lock=send_lock
+                    )
+                    continue
 
                 report_status(f"LOAD {worker_id} 0")
 
@@ -203,6 +246,8 @@ def handle_worker(sock, address):
         print(f"[WORKER] {address}: {exc}")
 
     finally:
+        report_down = False
+
         with condition:
             state = workers.get(worker_id)
 
@@ -210,11 +255,16 @@ def handle_worker(sock, address):
                 workers.pop(worker_id, None)
                 requeue_in_flight(state)
                 condition.notify_all()
+                report_down = True
 
-                report_status(f"WORKER_DOWN {worker_id}")
-                print(f"[WORKER] {worker_id} disconnected")
+        if report_down:
+            report_status(f"WORKER_DOWN {worker_id}")
+            print(f"[WORKER] {worker_id} disconnected")
 
-        sock.close()
+        try:
+            sock.close()
+        except OSError:
+            pass
 
 
 def handle_client(sock, address):
@@ -225,6 +275,7 @@ def handle_client(sock, address):
     try:
         while True:
             line = reader.readline()
+
             if line is None:
                 break
 
@@ -344,7 +395,6 @@ def choose_job():
         )
 
     elif scheduler_algorithm == "priority":
-        # Higher base priority and longer waiting time increase the score.
         index = max(
             range(len(pending_jobs)),
             key=lambda i: (
@@ -355,7 +405,9 @@ def choose_job():
         )
 
     else:
-        raise ValueError(f"Unknown scheduling algorithm: {scheduler_algorithm}")
+        raise ValueError(
+            f"Unknown scheduling algorithm: {scheduler_algorithm}"
+        )
 
     return pending_jobs.pop(index)
 
@@ -380,6 +432,11 @@ def scheduler():
 
             worker_id, state = selected
             state["job"] = job
+            state["load"] = 1
+
+            # Record the dispatch time immediately before sending the job.
+            dispatch_timestamp = time.time()
+            job["_dispatch_timestamp"] = dispatch_timestamp
 
         # Do not send internal queue metadata to the worker.
         worker_job = {
@@ -387,59 +444,78 @@ def scheduler():
             if not key.startswith("_")
         }
 
+        # Include the dispatch timestamp in the worker's job message.
+        worker_job["dispatch_timestamp"] = dispatch_timestamp
+
         try:
             send_json(state["socket"], worker_job, state["send_lock"])
-            report_status(f"LOAD {worker_id} 75")
+
+            report_status(
+                f"LOAD {worker_id} {load_percentage(state['load'])}"
+            )
 
             print(
                 f"[SCHEDULER] {scheduler_algorithm.upper()}: "
-                f"Job {job['job_id']} -> {worker_id}"
+                f"Job {job['job_id']} -> {worker_id} "
+                f"(dispatched at {dispatch_timestamp:.6f})"
             )
 
         except OSError:
+            report_down = False
+
             with condition:
                 still_ours = state["job"] is job
+
                 state["job"] = None
                 state["busy"] = False
+                state["load"] = 0
 
-                if workers.get(worker_id, {}).get("socket") is state["socket"]:
+                current = workers.get(worker_id)
+
+                if current and current["socket"] is state["socket"]:
                     workers.pop(worker_id, None)
+                    report_down = True
 
                 if still_ours:
                     pending_jobs.append(job)
 
                 condition.notify_all()
 
-            report_status(f"WORKER_DOWN {worker_id}")
+            if report_down:
+                report_status(f"WORKER_DOWN {worker_id}")
 
 
 def watchdog():
     while True:
         time.sleep(1)
         now = time.monotonic()
+        timed_out = []
 
         with condition:
             stale = [
-                (wid, state["socket"])
-                for wid, state in workers.items()
+                (worker_id, state["socket"])
+                for worker_id, state in workers.items()
                 if now - state["last_seen"] > HEARTBEAT_TIMEOUT
             ]
 
-            for wid, sock in stale:
-                state = workers.pop(wid, None)
+            for worker_id, sock in stale:
+                state = workers.pop(worker_id, None)
 
                 if state:
                     requeue_in_flight(state)
-
-                print(f"[WATCHDOG] {wid} heartbeat timed out")
-                report_status(f"WORKER_DOWN {wid}")
-
-                try:
-                    sock.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
+                    timed_out.append((worker_id, sock))
 
             condition.notify_all()
+
+        # Network operations happen after releasing the shared lock.
+        for worker_id, sock in timed_out:
+            print(f"[WATCHDOG] {worker_id} heartbeat timed out")
+            report_status(f"WORKER_DOWN {worker_id}")
+
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
 
 
 def listen(port, handler, name):
@@ -452,6 +528,7 @@ def listen(port, handler, name):
 
     while True:
         conn, address = server.accept()
+
         threading.Thread(
             target=handler,
             args=(conn, address),
@@ -461,12 +538,16 @@ def listen(port, handler, name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SDN Job Queue Server")
+
     parser.add_argument(
+        "--scheduler",
         "--algorithm",
+        dest="algorithm",
         choices=["fcfs", "sjf", "priority"],
         default="fcfs",
-        help="Job scheduling algorithm"
+        help="Job scheduling algorithm (also accepts --algorithm)"
     )
+
     parser.add_argument(
         "--aging-rate",
         type=float,
@@ -476,8 +557,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.aging_rate < 0:
-        parser.error("--aging-rate cannot be negative")
+    if not math.isfinite(args.aging_rate) or args.aging_rate < 0:
+        parser.error("--aging-rate must be a finite, non-negative number")
 
     scheduler_algorithm = args.algorithm
     AGING_RATE = args.aging_rate
