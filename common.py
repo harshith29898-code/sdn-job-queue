@@ -87,6 +87,11 @@ def _check_values(msg):
         d = msg["duration"]
         if isinstance(d, bool) or not isinstance(d, (int, float)) or not 0 < d <= MAX_DURATION:
             raise ProtocolError("BAD_VALUE", "duration out of range")
+
+        priority = msg.get("priority", 0)
+        if not _is_int(priority) or not 0 <= priority <= 10:
+            raise ProtocolError("BAD_VALUE", "priority must be an integer from 0 to 10")
+
     elif t == "HEARTBEAT":
         if not _is_int(msg["load"]) or msg["load"] < 0:
             raise ProtocolError("BAD_VALUE", "load must be int >= 0")
@@ -95,7 +100,6 @@ def _check_values(msg):
             raise ProtocolError("BAD_VALUE", "status must be completed|failed")
     if t in ("REGISTER", "HEARTBEAT", "RESULT") and not isinstance(msg["worker_id"], str):
         raise ProtocolError("BAD_VALUE", "worker_id must be string")
-
 
 class LineReader:
     """Buffers a TCP byte stream and yields complete lines (handles partial reads)."""

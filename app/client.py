@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """P2: Submit a job and wait for its result."""
 
@@ -14,14 +13,21 @@ def main():
     parser.add_argument("--port", type=int, default=5000)
     parser.add_argument("--payload-size", type=int, default=1000)
     parser.add_argument("--duration", type=float, default=2)
+    parser.add_argument("--priority", type=int, default=0)
+
     args = parser.parse_args()
 
+    if not 0 <= args.priority <= 10:
+        parser.error("priority must be between 0 and 10")
+
     job_id = int(time.time() * 1000) % 2_000_000_000
+
     job = {
         "type": "JOB",
         "job_id": job_id,
         "payload_size": args.payload_size,
         "duration": args.duration,
+        "priority": args.priority,
     }
 
     with socket.create_connection((args.server, args.port), timeout=10) as sock:
@@ -32,6 +38,7 @@ def main():
 
         while True:
             line = reader.readline()
+
             if not line:
                 print("Server closed the connection before returning a result.")
                 break
@@ -43,7 +50,8 @@ def main():
                 if message.get("job_id") != job_id:
                     print("Unexpected ACK for a different job.")
                     break
-                print(f"Job {job_id} accepted by server; waiting for result...")
+
+                print(f"Job {job_id} accepted; waiting for result...")
 
             elif message.get("type") == "RESULT":
                 if message.get("job_id") != job_id:
