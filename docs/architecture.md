@@ -175,7 +175,7 @@ Every `--interval` seconds (default 2) `switch_stats.py` asks each connected swi
 
 1. A client connects to the server on 5000 and sends a `JOB`. The first packet of this connection reaches a switch with no matching rule, so the switch passes it to POX, which installs a flow (and, with the allow-list on, checks the source IP first). The rest of the connection runs through the switch alone.
 2. The server rejects duplicates and bad input with an `ERROR`; otherwise it replies `ACK` and queues the job.
-3. The scheduler picks the next idle, live worker, sends it the `JOB`, and reports `LOAD <worker> 100`.
+3. The scheduler selects a job according to the configured algorithm and assigns it to the next available worker using round-robin selection. It then reports `LOAD <worker> 100`.
 4. The worker runs the job and sends a `RESULT`.
 5. The server reports `LOAD <worker> 0` and forwards the `RESULT` to the client that submitted the job.
 
@@ -207,7 +207,7 @@ On the 3-switch ring and the 4-switch mesh, dynamic mode recovered in 0.4 s (one
 
 ## 7. Scheduling and failure handling
 
-- **Queue:** jobs wait in a FIFO queue.
+- **Queue:** pending jobs are held until selected by the configured scheduling algorithm.
 - **Round-robin:** `next_worker` is a position in the fixed worker order (`w1, w2, w3`). The server starts after the worker chosen last time and takes the first one that is registered, idle and has a fresh heartbeat. A failed worker is skipped and the rotation carries on from where it was.
 - **One job per worker at a time:** a worker is marked busy until it returns its result.
 - **Heartbeat:** every 2 seconds from each worker. A worker with no heartbeat for 6 seconds is marked down.
