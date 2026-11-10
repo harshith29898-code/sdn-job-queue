@@ -90,7 +90,9 @@ Confirms receipt/acceptance, **not** completion.
 | MISSING_FIELD   | required field absent                           |
 | BAD_VALUE       | field has wrong type or is out of range         |
 | DUPLICATE_JOB   | `job_id` already known                          |
-| NO_WORKERS      | no worker is UP (job is *not* accepted)         |
+| NO_WORKERS      | reserved; used by `tests/reference_server.py` 
+                    only. The real server accepts the job and keeps  
+                    it queued until a worker registers              |
 | TOO_LONG        | line over 4096 bytes                            |
 
 An ERROR never closes the connection; the sender may continue. Include `"job_id"` in the ERROR when the offending message had one.
@@ -124,7 +126,7 @@ Each worker runs **one job at a time**. Two decisions are made whenever a worker
 
 - Worker sends HEARTBEAT every **2 s**.
 - Server marks a worker **DOWN** after **~6 s** with no heartbeat (or on TCP disconnect).
-- On DOWN: server requeues that worker's unfinished jobs at the back of the queue (full redistribution testing is D2; D1 only requires marking DOWN and not scheduling to it).
+- On DOWN: server requeues that worker's unfinished job. The job keeps its original arrival order and arrival time, so under `fcfs` it is served before newer jobs (it was already waiting) and under `priority` its aging is not reset.
 - A DOWN worker that re-REGISTERs becomes UP again.
 
 ## 7. Server <-> Controller status channel (port 5002)
@@ -139,7 +141,7 @@ Plain text, one command per line, `\n`-terminated. Server is the TCP client; POX
 
 POX sends no reply. The server must not wait for one.
 
-The server sends `LOAD` when it hands a job to a worker, when the worker finishes, and for each heartbeat (the worker reports how many jobs it is running, and the server sends that number x 100, capped at 100). Each line is sent on its own short connection to port 5002. D1 requirement: POX receives and logs these lines. D2 uses them to drive routing decisions. If POX is unreachable the server logs a warning and keeps working.
+The server sends `LOAD` when it hands a job to a worker, when the worker finishes, and for each heartbeat (the worker reports how many jobs it is running, and the server sends that number x 100, capped at 100). Each line is sent on its own short connection to port 5002, by a background sender thread so a slow or unreachable POX never delays scheduling (if more than 500 lines are waiting, new ones are dropped). D1 requirement: POX receives and logs these lines. D2 uses them to drive routing decisions. If POX is unreachable the server logs a warning and keeps working.
 
 ## 8. D1 scope vs D2
 
