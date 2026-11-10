@@ -90,9 +90,7 @@ Confirms receipt/acceptance, **not** completion.
 | MISSING_FIELD   | required field absent                           |
 | BAD_VALUE       | field has wrong type or is out of range         |
 | DUPLICATE_JOB   | `job_id` already known                          |
-| NO_WORKERS      | reserved; used by `tests/reference_server.py` 
-                    only. The real server accepts the job and keeps  
-                    it queued until a worker registers              |
+| NO_WORKERS      | reserved; used by `tests/reference_server.py` only. The real server accepts the job and keeps it queued until a worker registers |
 | TOO_LONG        | line over 4096 bytes                            |
 
 An ERROR never closes the connection; the sender may continue. Include `"job_id"` in the ERROR when the offending message had one.
