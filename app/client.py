@@ -3,14 +3,20 @@
 
 import argparse
 import json
+import os
 import socket
+import sys
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from common import SERVER_IP, CLIENT_PORT  # noqa: E402
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--server", default="10.0.0.10")
-    parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--server", default=SERVER_IP)
+    parser.add_argument("--port", type=int, default=CLIENT_PORT)
     parser.add_argument("--payload-size", type=int, default=1000)
     parser.add_argument("--duration", type=float, default=2)
     parser.add_argument("--priority", type=int, default=0)
@@ -43,7 +49,11 @@ def main():
                 print("Server closed the connection before returning a result.")
                 break
 
-            message = json.loads(line)
+            try:
+                message = json.loads(line)
+            except ValueError:
+                print("Ignoring a malformed line from the server.")
+                continue
             print("Server:", json.dumps(message, indent=2))
 
             if message.get("type") == "ACK" and message.get("ref") == "JOB":

@@ -5,6 +5,7 @@ import os
 import sys
 import argparse
 import math
+import queue
 import socket
 import threading
 import time
@@ -12,13 +13,14 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from common import decode, make_error, ProtocolError, LineReader
+from common import (
+    decode, make_error, ProtocolError, LineReader,
+    CLIENT_PORT, WORKER_PORT, CONTROLLER_IP, CONTROLLER_PORT,
+    HEARTBEAT_TIMEOUT,
+)
 
-CLIENT_PORT = 5000
-WORKER_PORT = 5001
-POX_HOST = "10.0.0.254"
-POX_PORT = 5002
-HEARTBEAT_TIMEOUT = 6
+POX_HOST = CONTROLLER_IP
+POX_PORT = CONTROLLER_PORT
 
 # Scheduling configuration
 scheduler_algorithm = "fcfs"
@@ -59,13 +61,32 @@ def send_error(sock, code, message="", job_id=None, send_lock=None):
         sock.sendall(data)
 
 
+status_queue = queue.Queue(maxsize=500)
+
+
+def _status_sender():
+    """Send queued status lines to POX, in order, off the hot path."""
+    while True:
+        message = status_queue.get()
+        try:
+            with socket.create_connection(
+                (POX_HOST, POX_PORT), timeout=2
+            ) as conn:
+                conn.sendall((message + "\n").encode())
+        except OSError as exc:
+            print(f"[POX] Status report failed: {exc}")
+
+
 def report_status(message):
-    """Send a plain-text status update to the POX controller."""
+    """Queue a plain-text status update for the POX controller.
+
+    Never blocks: if POX is slow or unreachable, the scheduler and worker
+    threads keep running. If the queue is full the update is dropped.
+    """
     try:
-        with socket.create_connection((POX_HOST, POX_PORT), timeout=2) as conn:
-            conn.sendall((message + "\n").encode())
-    except OSError as exc:
-        print(f"[POX] Status report failed: {exc}")
+        status_queue.put_nowait(message)
+    except queue.Full:
+        print(f"[POX] Status queue full, dropped: {message}")
 
 
 def load_percentage(worker_load):
@@ -180,6 +201,10 @@ def handle_worker(sock, address):
 
                     if state and state["socket"] is sock:
                         state["last_seen"] = time.monotonic()
+                        # A job the scheduler just assigned counts as busy even
+                        # if the worker has not started it yet.
+                        if state.get("job") is not None:
+                            worker_load = max(worker_load, 1)
                         state["load"] = worker_load
                         should_report = True
 
@@ -233,7 +258,10 @@ def handle_worker(sock, address):
                     except OSError:
                         pass
 
-                print(f"[RESULT] Job {job_id} completed by {worker_id}")
+                print(
+                    f"[RESULT] Job {job_id} {message.get('status', 'completed')}"
+                    f" by {worker_id}"
+                )
 
             else:
                 send_error(
@@ -566,6 +594,7 @@ if __name__ == "__main__":
     print(f"[SCHEDULER] Algorithm: {scheduler_algorithm.upper()}")
     print(f"[SCHEDULER] Aging rate: {AGING_RATE} priority points/second")
 
+    threading.Thread(target=_status_sender, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()
     threading.Thread(target=watchdog, daemon=True).start()
 
