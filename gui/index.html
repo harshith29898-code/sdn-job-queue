@@ -67,7 +67,7 @@ function gantt(now,W,J){const c=$('#cv'),dp=devicePixelRatio||1,w=c.clientWidth,
   g.fillStyle=col[j.state]||'#2d5be3';g.fillRect(a,i*38+6,Math.max(b-a,2),26);if(b-a>34){g.fillStyle='#fff';g.fillText('…'+String(j.id).slice(-4),a+5,i*38+23)}})}
 function net(){const el=$('#net'),s=st.stats;if(!s){el.innerHTML='<span class="mute">No statistics stream. Start POX with <code>switch_stats</code> to see switches and links here.</span>';return}
  const sum=(o,k)=>o&&typeof o=='object'?Object.entries(o).reduce((n,[a,v])=>n+(a==k&&typeof v=='number'?v:sum(v,k)),0):0;
- let h='';const L=s.links||[];(Array.isArray(L)?L.map(l=>[Object.entries(l).filter(([k,v])=>k!='up'&&typeof v!='object'&&typeof v!='boolean').map(e=>e[1]).join(' – '),l.up]):Object.entries(L).map(([k,l])=>[k,l.up])).forEach(([n,up])=>h+=`<div><span>${esc(n)}</span><span class="chip ${up?'idle':'down'}">${up?'up':'down'}</span></div>`);
+ let h='';const L=s.links||[];(Array.isArray(L)?L.map(l=>[`${l.a} – ${l.b}`,l.up]):Object.entries(L).map(([k,l])=>[k,l.up])).forEach(([n,up])=>h+=`<div><span>${esc(n)}</span><span class="chip ${up?'idle':'down'}">${up?'up':'down'}</span></div>`);
  Object.entries(s.switches||{}).forEach(([n,v])=>{const b=sum(v,'rx_bytes')+sum(v,'tx_bytes'),p=prev[n],r=p&&s.t>p.t?(b-p.b)/(s.t-p.t):null;prev[n]={b,t:s.t};
   h+=`<div><span><b>${esc(n)}</b> <span class="mute">${v.flows??0} flows${v.stale?' · no reply':''}</span></span><span>${r==null?'–':r>1024?(r/1024).toFixed(1)+' KB/s':r.toFixed(0)+' B/s'}</span></div>`});el.innerHTML=h}
 function demo(){if(sim)return;conn('demo','Demo data (bridge not running)');let c=0;sim={jobs:[],n:1000,W:['w1','w2','w3','w4'].map(id=>({id,state:'idle',job:null}))};
