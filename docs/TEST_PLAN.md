@@ -6,6 +6,7 @@
 |---|---|---|---|
 | Protocol and server | messages, errors, framing, worker failure (13 tests, T01-T13) | `tests/test_d1.py` | No |
 | Scheduling | the order each algorithm picks jobs, aging, input checks (10 tests, S01-S10) | `tests/test_scheduling.py` | No |
+| Switch logic and tools (POX, no switches needed) | dynamic switch (20 checks), allow-list (26 tests), statistics stream (23 tests), link failure tool (7 tests) | `sdn/test_dynamic_switch.py`, `sdn/test_allowlist.py`, `sdn/test_switch_stats.py`, `topology/test_linkctl.py` | No |
 | Network and integration | connectivity, POX status lines, link failures, access control | manual steps in section 4 | Yes |
 | Experiments | scheduler comparison, worker failure under load, controller comparison | `experiments/`, `app/load_generator.py` | local ones no, network ones yes |
 
@@ -28,6 +29,15 @@ Rules for `test_d1.py`:
 - Do not run it with POX's `--allowlist` on. The fake workers connect from c1, so the allow-list blocks them and the tests fail. That is expected, not a bug.
 
 `test_scheduling.py` needs ports 5000 and 5001 free (stop any running server first).
+
+Unit tests for the network side (no Mininet; POX cloned to `~/pox`, or set `POX_DIR`):
+
+```
+python3 sdn/test_dynamic_switch.py -v     # expects 20 of 20 checks; starts POX itself on port 6633 and takes about 90 s, so stop any running POX first
+python3 sdn/test_allowlist.py -v          # expects 26 tests OK
+python3 sdn/test_switch_stats.py -v       # expects 23 tests OK
+python3 topology/test_linkctl.py -v       # expects 7 tests OK
+```
 
 ## 3. Running inside Mininet
 
@@ -77,6 +87,11 @@ Rules for `test_d1.py`:
 | S07-S09 | Input | priority 11, -1, "high" | ERROR BAD_VALUE |
 | S10 | Input | `--aging-rate -1` | server refuses to start |
 
+| U01 | Switch | `sdn/test_dynamic_switch.py`: dynamic and static behaviour with fake switches | 20 of 20 checks pass |
+| U02 | Access control | `sdn/test_allowlist.py`: allow-list rules for client and worker IPs | 26 tests OK |
+| U03 | Statistics | `sdn/test_switch_stats.py`: statistics stream lines, links and stale switches | 23 tests OK |
+| U04 | Links | `topology/test_linkctl.py`: fail and restore commands (including `--dry-run`) | 7 tests OK |
+
 ### Manual (Mininet)
 
 | ID | Area | Check | Expected |
@@ -112,7 +127,23 @@ sudo python3 topology/linkctl.py flap s1 s2 --after 10 --for 30 --log /tmp/flap-
 
 Keep the CSV from `results/`, the `/tmp/flap-run1.log` file and the POX output for each run. Compare, per run: jobs completed and lost, the longest time with no result arriving, and the slowest job. Repeat with `--mode=static` and with `--topo line`.
 
-## 6. Results log
+## 6. Demo script
+
+Run this live, in order. Each step says what to point out. The GUI steps need `gui/` merged (or the `gui` branch checked out).
+
+1. **Start POX** (terminal 1): `cd ~/pox` then
+   `PYTHONPATH=~/sdn-job-queue/sdn python3 pox.py openflow.discovery openflow.spanning_tree dynamic_switch --mode=dynamic job_status switch_stats`
+   Point out: `Status channel listening on 0.0.0.0:5002`.
+2. **Start the network** (terminal 2): `cd ~/sdn-job-queue` then `sudo python3 topology/topology.py`. At `mininet>` run `pingall`. Point out: 0% dropped.
+3. **Start the server and three workers** (the commands in section 3, step 4). Point out: POX logs `Worker w1 is UP`, then w2 and w3.
+4. **Start the GUI** (terminal 3, on the VM): `python3 gui/bridge.py --log /tmp/server.log`, then open http://localhost:8080. Point out: three workers shown as available, the switches and links in the Network panel.
+5. **Send jobs from the GUI** (for example 10 jobs, 0.5 s apart, 2 s of work). Point out: jobs wait in the queue, bars appear on the worker lanes, round-robin across w1 to w3.
+6. **Change the scheduler**: restart the server with `--scheduler sjf` (or `priority --aging-rate 1`), send the same load, and point out the different order of jobs.
+7. **Kill a worker during load**: `w1 kill %python3`. Point out: w1 goes offline in the GUI, POX logs `Worker w1 is DOWN`, its unfinished job is requeued and finishes on another worker.
+8. **Fail a link during load**: start a load from c2, then `sudo python3 topology/linkctl.py flap s1 s2 --after 5 --for 20`. Point out: the link turns down in the GUI and jobs keep completing in dynamic mode. Repeat with POX in `--mode=static` to show the long outage.
+9. **Allow-list (optional)**: restart POX with `--allowlist`, run a job from c1 (works), then the `connect_ex` check from c3 (refused, POX logs `BLOCKED`). See the README section "Allow-list".
+
+## 7. Results log
 
 | ID | Date | Where | Result | Notes |
 |---|---|---|---|---|
@@ -121,15 +152,19 @@ Keep the CSV from `results/`, the `/tmp/flap-run1.log` file and the POX output f
 | S01-S10 | 8 Nov 2026 | one machine, no Mininet, current server | 10 of 10 OK, about 11 s | also checked that the tests fail against the wrong algorithm |
 | E1 scheduler comparison | 8-9 Nov 2026 | one machine, simulated workers | done | see `docs/local_experiments_report.md` |
 | E2 worker failure under load | 9 Nov 2026 | one machine, simulated workers | done, no job lost | see `docs/local_experiments_report.md` |
-| N01-N05 on the D2 setup | | Mininet | to do | |
-| T01-T13, S01-S10 on the ring | | Mininet | to do | |
-| L01-L03 | | Mininet | to do | |
-| A01-A02 | | Mininet | to do | |
+| U01-U04 | [date] | one machine, POX cloned to `~/pox` | 20 of 20 checks, then 26, 23 and 7 tests OK | counts as given in `README.md` |
+| N01-N04 | [date] | Mininet + POX, 3-switch ring | `pingall` 0% dropped; POX shows `Worker wN is UP` and `DOWN` | from the quick start in `README.md` |
+| T01-T13 on the ring | [date] | Mininet + POX, 3-switch ring and single switch | 13 of 13 OK | as stated in `README.md` |
+| L01-L03 (ping measurement) | [date] | Mininet + POX, `ping -D -i 0.2` to the server, link failed for 15 s | ring: dynamic 0.4 s silence, static 15.3 s; line (control): about 15.3 s in both modes | single runs, ping only, not job-level; table in `README.md` |
+| A01-A02 | [date] | Mininet + POX, 3-switch ring | allowed client works, other host refused (`connect_ex` returns 11 after about 4 s), POX logs `BLOCKED`; both modes | not tested on the mesh |
+| N05 | | Mininet | to do | |
+| S01-S10 on the ring | | Mininet | to do | |
+| L01-L02 with the load generator (static vs dynamic) | | Mininet | to do | |
 
-## 7. Open items
+## 8. Open items
 
-- [ ] Run the manual cases N01-N05 and the automated tests on the 3-switch ring (dynamic mode).
-- [ ] Run L01-L03 with the load generator, at least 5 runs per static case.
-- [ ] Run A01-A02.
-- [ ] GUI reads the statistics stream (port 5003) and the server status.
-- [ ] `LOAD` values are now 0 or 100: `README.md` (lines 100, 167 and 182) and `sdn/README.md` (line 224) still say 75.
+- [ ] Run N05 and S01-S10 on the 3-switch ring (dynamic mode).
+- [ ] Run L01-L02 with the load generator, at least 5 runs per static case (needed for the static against dynamic comparison at job level).
+- [ ] Run one load with a long idle gap (`--idle-after 5 --idle-gap 30`) and keep the CSV in `results/`.
+- [ ] GUI (`gui/index.html`, `gui/bridge.py`) reads the statistics stream (port 5003) and the server log; test it on Mininet.
+- [x] `LOAD` values are 0 or 100: the old 75 values in `README.md` and `sdn/README.md` were fixed.

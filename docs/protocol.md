@@ -1,19 +1,15 @@
 # protocol.md — Distributed Job Queue & Worker Management (Delivery 1, extended for Delivery 2)
 
-Owner: P3. Status: **PROPOSED — agree as a team before coding against it.**
+Owner: P3. Status: **agreed and implemented** (Delivery 2).
 Core idea: the **SERVER** decides *who* does the work; the **CONTROLLER (POX)** decides *how packets travel*.
 
 ## 1. Topology and addressing (from architecture)
 
 | Node   | IP           | Role                  |
 |--------|--------------|-----------------------|
-| c1     | 10.0.0.1/24  | client                |
-| c2     | 10.0.0.2/24  | client                |
-| c3     | 10.0.0.3/24  | client                |
+| c1 to c7 | 10.0.0.1 to 10.0.0.7 /24 | clients (1 to 7, chosen when the topology starts) |
 | server | 10.0.0.10/24 | job queue + scheduler |
-| w1     | 10.0.0.21/24 | worker                |
-| w2     | 10.0.0.22/24 | worker                |
-| w3     | 10.0.0.23/24 | worker                |
+| w1 to w7 | 10.0.0.21 to 10.0.0.27 /24 | workers (1 to 7) |
 
 D1: 1 switch, POX attached to the switch. D2 adds multiple switches and redundant paths.
 
@@ -24,6 +20,7 @@ D1: 1 switch, POX attached to the switch. D2 adds multiple switches and redundan
 | 5000 | client <-> server    | server     | clients        |
 | 5001 | server <-> workers   | server     | workers        |
 | 5002 | server <-> controller| POX        | server         |
+| 5003 | controller -> GUI statistics stream (section 8) | POX (`switch_stats`) | GUI |
 
 All connections are long-lived TCP. The server listens on `0.0.0.0` for 5000 and 5001. Concurrent clients are handled with one thread (or task) per connection.
 
@@ -71,7 +68,7 @@ Confirms receipt/acceptance, **not** completion.
 ```json
 {"type":"REGISTER","worker_id":"w1"}
 ```
-`worker_id` is one of `w1,w2,w3`. Server replies ACK. A repeated REGISTER with the same id replaces the old connection.
+`worker_id` is a string. The project uses `w1` to `w7`, but the server accepts any string. Server replies ACK. A repeated REGISTER with the same id replaces the old connection.
 
 ### 4.5 HEARTBEAT (worker -> server)
 ```json
@@ -139,9 +136,22 @@ Plain text, one command per line, `\n`-terminated. Server is the TCP client; POX
 
 POX sends no reply. The server must not wait for one.
 
-The server sends `LOAD` when it hands a job to a worker, when the worker finishes, and for each heartbeat (the worker reports how many jobs it is running, and the server sends that number x 100, capped at 100). Each line is sent on its own short connection to port 5002, by a background sender thread so a slow or unreachable POX never delays scheduling (if more than 500 lines are waiting, new ones are dropped). D1 requirement: POX receives and logs these lines. D2 uses them to drive routing decisions. If POX is unreachable the server logs a warning and keeps working.
+The server sends `LOAD` when it hands a job to a worker, when the worker finishes, and for each heartbeat (the worker reports how many jobs it is running, and the server sends that number x 100, capped at 100). Each line is sent on its own short connection to port 5002, by a background sender thread so a slow or unreachable POX never delays scheduling (if more than 500 lines are waiting, new ones are dropped). D1 requirement: POX receives and logs these lines. POX only logs them and keeps the latest state of each worker. It does not install flow rules from them: the load is only 0 or 100, and the spanning tree gives one active path between two hosts, so there is no routing choice to make from it. If POX is unreachable the server logs a warning and keeps working.
 
-## 8. D1 scope vs D2
+## 8. Statistics stream (POX -> GUI, port 5003)
+
+Optional. Started by adding `switch_stats` to the POX command. POX listens on TCP port 5003 and sends **one JSON line about every 2 s** to every connected client (the GUI). The GUI never sends anything.
+
+```json
+{"t":1794071755.243,"switches":{"s1":{"flows":6,"ports":{"1":{"rx_pkts":10,"tx_pkts":12,"rx_bytes":900,"tx_bytes":1100}}}},"links":[{"a":"s1","a_port":2,"b":"s2","b_port":1,"up":true}]}
+```
+| Field | Meaning |
+|-------|---------|
+| `t` | Unix time of the sample |
+| `switches` | per switch (`s1`, `s2`, ...): `flows` and per-port packet and byte counters; `"stale": true` if the switch did not answer in this round |
+| `links` | every switch-to-switch link seen by discovery, with `"up": true` or `false` (the controller's view) |
+
+## 9. D1 scope vs D2
 
 **D1:** 1 switch, 3 clients, 1 server, 3 workers, POX connected, job queue, round-robin, REGISTER + HEARTBEAT, server->controller status, end-to-end test.
 **D2:** multiple switches/redundant paths, load monitoring, dynamic path control, link/worker failure handling, rerouting, requeue/redistribute, performance experiments.
@@ -156,5 +166,19 @@ D2 changes to this protocol: optional `priority` in JOB (4.1), `dispatch_timesta
 | `tests/test_scheduling.py` | 10 tests that start the real server with each algorithm and check the order jobs are picked (fcfs, sjf, priority, aging) and that bad `priority` or `--aging-rate` values are rejected. Needs no Mininet or POX. |
 | `app/load_generator.py` | Sends jobs at random intervals (uniform or exponential gaps, optional long idle gap, random priorities, fixed `--seed` for repeatable runs) and writes one CSV row per job: `label, run_id, seq, job_id, planned_gap_s, duration_s, priority, payload_size, submit_time, ack_time, result_time, worker_id, status, error, ack_latency_s, completion_s, extra_delay_s`. Times are Unix seconds, so they line up with POX `t=` stamps and `topology/linkctl.py --log`. |
 
-## 9. Shared definitions
+## 11. Shared definitions
 All constants and encode/decode helpers live in `common.py`. Do not hardcode IPs, ports or timeouts elsewhere: `from common import *`.
+
+## 12. Server log lines read by the GUI
+
+`gui/bridge.py` does not use a special API. It reads these lines from the server's output (`/tmp/server.log`), so their wording must not change without updating the bridge.
+
+| Line | Meaning |
+|------|---------|
+| `[SCHEDULER] Algorithm: FCFS` | scheduling algorithm |
+| `[WORKER] w1 registered` | worker is up |
+| `[WORKER] w1 disconnected` / `[WATCHDOG] w1 heartbeat timed out` | worker is down |
+| `[CLIENT] Queued job 101 from ...` | job accepted |
+| `[SCHEDULER] FCFS: Job 101 -> w1 (dispatched at ...)` | job assigned to a worker |
+| `[SCHEDULER] Job 101 requeued` | job put back in the queue |
+| `[RESULT] Job 101 completed by w1` | job finished (`completed` or `failed`) |
