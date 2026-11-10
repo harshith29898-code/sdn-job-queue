@@ -1,13 +1,20 @@
-
 #!/usr/bin/env python3
 """P2: Worker registration, heartbeats, job execution and results."""
 
 import argparse
 import hashlib
 import json
+import os
 import socket
+import sys
 import threading
 import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from common import (  # noqa: E402
+    SERVER_IP, WORKER_PORT, HEARTBEAT_INTERVAL, MAX_PAYLOAD, MAX_DURATION,
+)
 
 
 def send_message(sock, lock, message):
@@ -16,8 +23,8 @@ def send_message(sock, lock, message):
 
 
 def execute_job(job):
-    payload_size = max(1, min(int(job.get("payload_size", 1000)), 1_000_000))
-    duration = max(0.1, min(float(job.get("duration", 2)), 30))
+    payload_size = max(1, min(int(job.get("payload_size", 1000)), MAX_PAYLOAD))
+    duration = max(0.1, min(float(job.get("duration", 2)), MAX_DURATION))
     payload = b"x" * payload_size
     digest = hashlib.sha256(payload).digest()
     deadline = time.monotonic() + duration
@@ -37,8 +44,8 @@ def execute_job(job):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--id", required=True, help="Worker ID, e.g. w1")
-    parser.add_argument("--server", default="10.0.0.10")
-    parser.add_argument("--port", type=int, default=5001)
+    parser.add_argument("--server", default=SERVER_IP)
+    parser.add_argument("--port", type=int, default=WORKER_PORT)
     args = parser.parse_args()
 
     while True:
@@ -75,7 +82,7 @@ def main():
                 print(f"[{args.id}] Registration acknowledged by server")
 
                 def heartbeat():
-                    while not stop.wait(2):
+                    while not stop.wait(HEARTBEAT_INTERVAL):
                         try:
                             send_message(sock, send_lock, {
                                 "type": "HEARTBEAT",
