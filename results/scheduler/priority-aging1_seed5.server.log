@@ -1,0 +1,305 @@
+[SCHEDULER] Algorithm: PRIORITY
+[SCHEDULER] Aging rate: 1.0 priority points/second
+[SERVER] Clients listening on port 5000
+[SERVER] Workers listening on port 5001
+[WORKER] w3 registered
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w2 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w1 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781206 -> w3 (dispatched at 1794259781.207106)
+[CLIENT] Queued job 659781206 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781207 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781207 -> w2 (dispatched at 1794259781.725481)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781208 -> w1 (dispatched at 1794259782.294435)
+[CLIENT] Queued job 659781208 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781209 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781208 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781209 -> w1 (dispatched at 1794259782.865090)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781206 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781210 -> w3 (dispatched at 1794259783.364511)
+[CLIENT] Queued job 659781210 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781211 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781211 -> w1 (dispatched at 1794259783.985753)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781209 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781210 completed by w3
+[CLIENT] Queued job 659781212 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781212 -> w3 (dispatched at 1794259784.341634)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781207 completed by w2
+[CLIENT] Queued job 659781213 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781213 -> w2 (dispatched at 1794259784.704531)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781212 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781214 -> w3 (dispatched at 1794259784.968414)
+[CLIENT] Queued job 659781214 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781215 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781215 -> w1 (dispatched at 1794259785.436473)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781211 completed by w1
+[CLIENT] Queued job 659781216 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781216 -> w2 (dispatched at 1794259785.665192)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781213 completed by w2
+[CLIENT] Queued job 659781217 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781218 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781218 -> w1 (dispatched at 1794259787.047229)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781215 completed by w1
+[CLIENT] Queued job 659781219 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781220 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781219 -> w3 (dispatched at 1794259787.459098)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781214 completed by w3
+[CLIENT] Queued job 659781221 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781222 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781218 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781221 -> w1 (dispatched at 1794259788.268020)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781217 -> w2 (dispatched at 1794259788.345911)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781216 completed by w2
+[CLIENT] Queued job 659781223 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781224 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781225 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781226 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781223 -> w3 (dispatched at 1794259789.649735)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781219 completed by w3
+[CLIENT] Queued job 659781227 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781228 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781223 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781226 -> w3 (dispatched at 1794259790.980472)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781221 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781224 -> w1 (dispatched at 1794259790.998814)
+[CLIENT] Queued job 659781229 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781220 -> w2 (dispatched at 1794259791.246618)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781217 completed by w2
+[CLIENT] Queued job 659781230 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781231 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781231 -> w3 (dispatched at 1794259792.271016)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781226 completed by w3
+[CLIENT] Queued job 659781232 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781233 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781224 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781229 -> w1 (dispatched at 1794259792.989446)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781234 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781229 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781225 -> w1 (dispatched at 1794259793.540053)
+[CLIENT] Queued job 659781235 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781228 -> w2 (dispatched at 1794259794.167296)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781220 completed by w2
+[CLIENT] Queued job 659781236 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781231 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781227 -> w3 (dispatched at 1794259794.541828)
+[CLIENT] Queued job 659781237 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781228 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781222 -> w2 (dispatched at 1794259794.728174)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781233 -> w1 (dispatched at 1794259794.930620)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781225 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781238 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781239 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781238 -> w3 (dispatched at 1794259795.482362)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781227 completed by w3
+[CLIENT] Queued job 659781240 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781241 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781235 -> w2 (dispatched at 1794259796.268794)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781222 completed by w2
+[CLIENT] Queued job 659781242 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781238 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781242 -> w3 (dispatched at 1794259796.833110)
+[CLIENT] Queued job 659781243 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781235 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781241 -> w2 (dispatched at 1794259797.039597)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781244 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781242 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781234 -> w3 (dispatched at 1794259797.453985)
+[CLIENT] Queued job 659781245 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781233 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781232 -> w1 (dispatched at 1794259797.791386)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781237 -> w2 (dispatched at 1794259798.310173)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781241 completed by w2
+[CLIENT] Queued job 659781246 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781247 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781247 -> w1 (dispatched at 1794259798.781922)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781232 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781248 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781249 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781250 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781246 -> w1 (dispatched at 1794259799.802560)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781247 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781230 -> w2 (dispatched at 1794259800.090749)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781237 completed by w2
+[CLIENT] Queued job 659781251 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781234 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781239 -> w3 (dispatched at 1794259800.184673)
+[CLIENT] Queued job 659781252 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659781253 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781254 from ('127.0.0.1', 51564)
+[CLIENT] Queued job 659781255 from ('127.0.0.1', 51564)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781248 -> w1 (dispatched at 1794259801.903264)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781246 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781236 -> w2 (dispatched at 1794259802.041498)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781230 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781239 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781244 -> w3 (dispatched at 1794259802.395245)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781236 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781252 -> w2 (dispatched at 1794259802.632133)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781244 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781240 -> w3 (dispatched at 1794259803.756027)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781248 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781255 -> w1 (dispatched at 1794259803.984216)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781243 -> w2 (dispatched at 1794259804.262785)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781252 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781253 -> w3 (dispatched at 1794259804.456539)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781240 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781253 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781249 -> w3 (dispatched at 1794259805.747175)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781250 -> w2 (dispatched at 1794259805.773528)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781243 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781255 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781245 -> w1 (dispatched at 1794259806.544902)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781251 -> w2 (dispatched at 1794259807.324161)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781250 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781249 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] PRIORITY: Job 659781254 -> w3 (dispatched at 1794259807.337645)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781245 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781254 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659781251 completed by w2

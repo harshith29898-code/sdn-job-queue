@@ -1,0 +1,311 @@
+[SCHEDULER] Algorithm: SJF
+[SCHEDULER] Aging rate: 1.0 priority points/second
+[SERVER] Clients listening on port 5000
+[SERVER] Workers listening on port 5001
+[WORKER] w2 registered
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w1 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w3 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321282 -> w2 (dispatched at 1794168321.283474)
+[CLIENT] Queued job 568321282 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321283 -> w1 (dispatched at 1794168321.520822)
+[CLIENT] Queued job 568321283 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321284 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321284 -> w3 (dispatched at 1794168322.014858)
+[CLIENT] Queued job 568321285 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321286 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321283 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321286 -> w1 (dispatched at 1794168322.921445)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321287 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321288 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321286 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321285 -> w1 (dispatched at 1794168323.822205)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321282 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321288 -> w2 (dispatched at 1794168324.174242)
+[CLIENT] Queued job 568321289 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321284 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321287 -> w3 (dispatched at 1794168324.185441)
+[CLIENT] Queued job 568321290 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321285 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321289 -> w1 (dispatched at 1794168324.852798)
+[CLIENT] Queued job 568321291 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321292 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321293 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321294 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321288 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321293 -> w2 (dispatched at 1794168326.034821)
+[CLIENT] Queued job 568321295 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321287 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321292 -> w3 (dispatched at 1794168326.696115)
+[CLIENT] Queued job 568321296 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321296 -> w2 (dispatched at 1794168326.965466)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321293 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321297 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321297 -> w1 (dispatched at 1794168327.603471)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321289 completed by w1
+[CLIENT] Queued job 568321298 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321298 -> w3 (dispatched at 1794168327.786707)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321292 completed by w3
+[CLIENT] Queued job 568321299 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321300 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321297 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321299 -> w1 (dispatched at 1794168328.984228)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321301 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321296 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321301 -> w2 (dispatched at 1794168329.306144)
+[CLIENT] Queued job 568321302 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321303 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321299 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321303 -> w1 (dispatched at 1794168330.104995)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321300 -> w3 (dispatched at 1794168330.177496)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321298 completed by w3
+[CLIENT] Queued job 568321304 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321302 -> w2 (dispatched at 1794168330.946732)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321301 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321305 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321306 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321305 -> w1 (dispatched at 1794168331.825754)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321303 completed by w1
+[CLIENT] Queued job 568321307 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321307 -> w3 (dispatched at 1794168331.928123)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321300 completed by w3
+[CLIENT] Queued job 568321308 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321309 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321310 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321302 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321310 -> w2 (dispatched at 1794168333.257471)
+[CLIENT] Queued job 568321311 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321308 -> w3 (dispatched at 1794168333.698740)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321307 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321309 -> w1 (dispatched at 1794168333.866411)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321305 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321304 -> w2 (dispatched at 1794168333.948093)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321310 completed by w2
+[CLIENT] Queued job 568321312 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321313 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321308 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321312 -> w3 (dispatched at 1794168334.979318)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321314 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321313 -> w1 (dispatched at 1794168335.287210)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321309 completed by w1
+[CLIENT] Queued job 568321315 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321312 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321315 -> w3 (dispatched at 1794168335.749913)
+[CLIENT] Queued job 568321316 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321317 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321313 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321316 -> w1 (dispatched at 1794168336.468054)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321317 -> w2 (dispatched at 1794168336.488831)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321304 completed by w2
+[CLIENT] Queued job 568321318 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321318 -> w3 (dispatched at 1794168336.910622)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321315 completed by w3
+[CLIENT] Queued job 568321319 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321319 -> w1 (dispatched at 1794168337.118716)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321316 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321320 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321318 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321320 -> w3 (dispatched at 1794168337.621453)
+[CLIENT] Queued job 568321321 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321321 -> w2 (dispatched at 1794168337.890214)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321317 completed by w2
+[CLIENT] Queued job 568321322 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321323 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321323 -> w3 (dispatched at 1794168338.442011)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321320 completed by w3
+[CLIENT] Queued job 568321324 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321323 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321322 -> w3 (dispatched at 1794168339.032812)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321325 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321325 -> w1 (dispatched at 1794168339.439516)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321319 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321322 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321324 -> w3 (dispatched at 1794168339.643654)
+[CLIENT] Queued job 568321326 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321326 -> w2 (dispatched at 1794168339.700905)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321321 completed by w2
+[CLIENT] Queued job 568321327 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321328 from ('127.0.0.1', 56202)
+[CLIENT] Queued job 568321329 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 568321330 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321325 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321328 -> w1 (dispatched at 1794168341.201593)
+[CLIENT] Queued job 568321331 from ('127.0.0.1', 56202)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321324 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321329 -> w3 (dispatched at 1794168341.714507)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321327 -> w2 (dispatched at 1794168342.111841)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321326 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321331 -> w1 (dispatched at 1794168342.882387)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321328 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321330 -> w3 (dispatched at 1794168343.935334)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321329 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321327 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321291 -> w2 (dispatched at 1794168344.502725)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321311 -> w1 (dispatched at 1794168345.333361)
+[RESULT] Job 568321331 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321314 -> w3 (dispatched at 1794168346.406011)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321330 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321290 -> w2 (dispatched at 1794168347.213286)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321291 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321311 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321306 -> w1 (dispatched at 1794168348.104168)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321314 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321295 -> w3 (dispatched at 1794168349.196754)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] SJF: Job 568321294 -> w2 (dispatched at 1794168350.044041)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321290 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321306 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321295 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 568321294 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests

@@ -1,0 +1,312 @@
+[SCHEDULER] Algorithm: FCFS
+[SCHEDULER] Aging rate: 1.0 priority points/second
+[SERVER] Workers listening on port 5001
+[SERVER] Clients listening on port 5000
+[WORKER] w2 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w1 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w3 registered
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879042 -> w2 (dispatched at 1794259879.043611)
+[CLIENT] Queued job 659879042 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879043 -> w1 (dispatched at 1794259879.345909)
+[CLIENT] Queued job 659879043 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879044 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879044 -> w3 (dispatched at 1794259879.734959)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879042 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879045 -> w2 (dispatched at 1794259879.972903)
+[CLIENT] Queued job 659879045 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879046 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879046 -> w2 (dispatched at 1794259880.543599)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879045 completed by w2
+[CLIENT] Queued job 659879047 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879043 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879047 -> w1 (dispatched at 1794259881.086646)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879044 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879048 -> w3 (dispatched at 1794259881.259946)
+[CLIENT] Queued job 659879048 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879049 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879050 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879051 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879049 -> w3 (dispatched at 1794259882.020808)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879048 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879050 -> w1 (dispatched at 1794259882.257394)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879047 completed by w1
+[CLIENT] Queued job 659879052 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879049 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879051 -> w3 (dispatched at 1794259882.581712)
+[CLIENT] Queued job 659879053 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879046 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879052 -> w2 (dispatched at 1794259882.954584)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879054 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879055 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879053 -> w3 (dispatched at 1794259884.142406)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879051 completed by w3
+[CLIENT] Queued job 659879056 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879057 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879054 -> w1 (dispatched at 1794259884.958134)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879050 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879058 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879052 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879055 -> w2 (dispatched at 1794259885.365491)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879053 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879056 -> w3 (dispatched at 1794259885.503256)
+[CLIENT] Queued job 659879059 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879060 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879057 -> w3 (dispatched at 1794259886.253980)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879056 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879058 -> w1 (dispatched at 1794259886.608870)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879054 completed by w1
+[CLIENT] Queued job 659879061 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879059 -> w2 (dispatched at 1794259886.906034)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879055 completed by w2
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] Job 659879059 requeued
+[POX] Status report failed: no POX in scheduling tests
+[WORKER] w2 disconnected
+[CLIENT] Queued job 659879062 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879063 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879064 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879065 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879057 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879059 -> w3 (dispatched at 1794259888.904648)
+[CLIENT] Queued job 659879066 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879067 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879060 -> w1 (dispatched at 1794259889.349597)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879058 completed by w1
+[CLIENT] Queued job 659879068 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879069 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879070 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879059 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879061 -> w3 (dispatched at 1794259890.465489)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879060 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879062 -> w1 (dispatched at 1794259890.560391)
+[CLIENT] Queued job 659879071 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879072 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879073 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879074 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879075 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879061 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879063 -> w3 (dispatched at 1794259892.226207)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879064 -> w1 (dispatched at 1794259892.260911)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879062 completed by w1
+[CLIENT] Queued job 659879076 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879077 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879063 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879065 -> w3 (dispatched at 1794259893.157027)
+[CLIENT] Queued job 659879078 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879079 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879080 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879066 -> w1 (dispatched at 1794259894.701740)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879064 completed by w1
+[CLIENT] Queued job 659879081 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879082 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879065 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879067 -> w3 (dispatched at 1794259895.317603)
+[CLIENT] Queued job 659879083 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879084 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879085 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879068 -> w1 (dispatched at 1794259896.502581)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879066 completed by w1
+[CLIENT] Queued job 659879086 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[CLIENT] Queued job 659879087 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879088 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879089 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879067 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879069 -> w3 (dispatched at 1794259897.648298)
+[CLIENT] Queued job 659879090 from ('127.0.0.1', 54610)
+[CLIENT] Queued job 659879091 from ('127.0.0.1', 54610)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879070 -> w1 (dispatched at 1794259898.763318)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879068 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879069 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879071 -> w3 (dispatched at 1794259899.128843)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879072 -> w1 (dispatched at 1794259899.834080)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879070 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879073 -> w3 (dispatched at 1794259900.979419)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879071 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879074 -> w1 (dispatched at 1794259901.614633)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879072 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879075 -> w3 (dispatched at 1794259903.750137)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879073 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879074 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879076 -> w1 (dispatched at 1794259904.505148)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879076 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879077 -> w1 (dispatched at 1794259906.305858)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879078 -> w3 (dispatched at 1794259906.390855)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879075 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879079 -> w3 (dispatched at 1794259908.311464)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879078 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879080 -> w1 (dispatched at 1794259909.176491)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879077 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879080 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879081 -> w1 (dispatched at 1794259909.677073)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879079 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879082 -> w3 (dispatched at 1794259909.842126)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879081 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879083 -> w1 (dispatched at 1794259911.707706)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879084 -> w3 (dispatched at 1794259912.352641)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879082 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879083 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879085 -> w1 (dispatched at 1794259913.668230)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879086 -> w3 (dispatched at 1794259914.843382)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879084 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879087 -> w3 (dispatched at 1794259915.384063)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879086 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879085 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879088 -> w1 (dispatched at 1794259916.528939)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879087 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879089 -> w3 (dispatched at 1794259916.584796)
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879089 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879090 -> w3 (dispatched at 1794259917.505507)
+[POX] Status report failed: no POX in scheduling tests
+[SCHEDULER] FCFS: Job 659879091 -> w3 (dispatched at 1794259918.426025)
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879090 completed by w3
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879088 completed by w1
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[POX] Status report failed: no POX in scheduling tests
+[RESULT] Job 659879091 completed by w3
