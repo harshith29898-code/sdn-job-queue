@@ -1,0 +1,82 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job queue console</title>
+<style>
+:root{--bg:#e8ecef;--panel:#f6f8f9;--ink:#1c2630;--mute:#64727f;--line:#cfd7de;--run:#2d5be3;--wait:#d99a00;--ok:#14866f;--bad:#c4372c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Avenir Next","Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px 36px;align-items:baseline;padding:16px 24px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}h2{font-size:15px;margin:0 0 10px}
+.k b{font-size:22px;font-variant-numeric:tabular-nums;margin-right:5px}.k span,.mute{color:var(--mute)}
+#conn{margin-left:auto;display:flex;align-items:center;gap:7px}#conn i{width:9px;height:9px;border-radius:50%;background:var(--mute)}#conn.on i{background:var(--ok)}#conn.demo i{background:var(--wait)}
+main{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;padding:16px 24px}@media(max-width:900px){main{grid-template-columns:1fr;padding:12px}}
+.col{display:grid;gap:16px;align-content:start;min-width:0}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+#lanes{display:flex}#names{width:150px;flex:none;padding-bottom:20px}#names div{height:38px;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
+#names small{color:var(--mute)}#cv{flex:1;min-width:0}
+.chip{display:inline-block;padding:0 8px;border-radius:9px;font-size:12px;border:1px solid currentColor}
+.queued{color:#9a6c00}.running{color:var(--run)}.done,.idle{color:var(--ok)}.failed,.down{color:var(--bad)}.busy{color:var(--run)}
+#queue{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;min-height:24px}#queue span{font:12px ui-monospace,Menlo,monospace;padding:1px 7px;border-radius:4px;background:#f1dfae}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-weight:600;color:var(--mute);padding:4px 8px 6px 0}td{padding:5px 8px 5px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}.id{font-family:ui-monospace,Menlo,monospace}
+form{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:grid;gap:3px;color:var(--mute);font-size:13px}
+input{font:inherit;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:#fff;width:100%}
+button{grid-column:1/-1;font:inherit;font-weight:600;padding:9px;border:0;border-radius:4px;background:var(--run);color:#fff;cursor:pointer}button:hover{background:#2349b8}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+.net{display:grid;gap:6px}.net div{display:flex;justify-content:space-between;gap:8px}
+</style></head><body>
+<header><h1>Job queue console</h1>
+<div class="k"><b id="kq">0</b><span>waiting</span></div><div class="k"><b id="kr">0</b><span>running</span></div><div class="k"><b id="kd">0</b><span>finished</span></div>
+<div class="k"><b id="kw">–</b><span>average wait</span></div><div class="k"><b id="kt">–</b><span>average time to result</span></div>
+<div id="conn"><i></i><span>Connecting…</span></div></header>
+<main><div class="col">
+<section><h2>Workers <span class="mute" id="algo"></span></h2>
+<div id="lanes"><div id="names"></div><canvas id="cv"></canvas></div>
+<div class="mute">Each bar is one job on one worker, over the last 60 seconds.</div>
+<h2 style="margin-top:14px">Waiting for a worker</h2><div id="queue"></div></section>
+<section><h2>Recent jobs</h2><table><thead><tr><th>Job</th><th>Status</th><th>Worker</th><th>Priority</th><th>Waited</th><th>Total</th></tr></thead><tbody id="rows"></tbody></table></section>
+</div><div class="col">
+<section><h2>Send jobs</h2><form id="f" onsubmit="return send(event)">
+<label>Jobs<input id="n" type="number" min="1" max="200" value="1"></label><label>Seconds between jobs<input id="gap" type="number" min="0" step="0.1" value="0.5"></label>
+<label>Work per job (s)<input id="dur" type="number" min="0.1" max="60" step="0.1" value="2"></label><label>Priority (0–10)<input id="pri" type="number" min="0" max="10" value="0"></label>
+<button>Send jobs</button><div class="mute" id="msg" style="grid-column:1/-1"></div></form></section>
+<section><h2>Network</h2><div class="net" id="net"></div></section>
+</div></main>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';'),sec=n=>n==null?'–':n.toFixed(1)+' s';
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null,col={done:'#14866f',running:'#2d5be3',failed:'#c4372c'};
+let st=null,sim=null,prev={};
+function setSt(s){st=s;st.rx=Date.now();render()}
+function conn(c,t){$('#conn').className=c;$('#conn span').textContent=t}
+function live(){let ok=false;const es=new EventSource('/events');
+ es.onmessage=e=>{ok=true;conn('on','Live');setSt(JSON.parse(e.data))};
+ es.onerror=()=>{if(ok)conn('','Bridge disconnected, retrying…');else{es.close();demo()}}}
+async function send(e){e.preventDefault();const b={count:+$('#n').value,gap:+$('#gap').value,duration:+$('#dur').value,priority:+$('#pri').value};
+ if(sim){for(let i=0;i<b.count;i++)sim.add(b.duration,b.priority);$('#msg').textContent='Added to demo data.';return false}
+ try{const r=await fetch('/submit',{method:'POST',body:JSON.stringify(b)});$('#msg').textContent=r.ok?`Sending ${b.count} job${b.count>1?'s':''}…`:'The bridge rejected those values.'}catch{$('#msg').textContent='Could not reach the bridge.'}return false}
+function render(){if(!st)return;const now=st.now+(Date.now()-st.rx)/1000,J=st.jobs,W=st.workers;
+ const q=J.filter(j=>j.state=='queued'),r=J.filter(j=>j.state=='running'),d=J.filter(j=>j.t_end);
+ $('#kq').textContent=q.length;$('#kr').textContent=r.length;$('#kd').textContent=d.length;
+ const w=avg(J.filter(j=>j.t_run).map(j=>j.t_run-j.t_sub)),t=avg(d.map(j=>j.t_end-j.t_sub));
+ $('#kw').textContent=sec(w);$('#kt').textContent=sec(t);$('#algo').textContent=st.algo&&st.algo!='?'?'· '+st.algo+' scheduling':'';
+ $('#names').innerHTML=W.length?W.map(x=>`<div><b>${esc(x.id)}</b><small class="${x.state}">${x.state=='busy'?'running job …'+String(x.job).slice(-4):x.state=='down'?'offline':'available'}</small></div>`).join(''):'<div class="mute">No workers yet</div>';
+ $('#queue').innerHTML=q.length?q.sort((a,b)=>a.t_sub-b.t_sub).slice(0,40).map(j=>`<span title="waiting ${sec(now-j.t_sub)}">…${String(j.id).slice(-4)}${j.priority!=null?' · p'+j.priority:''}</span>`).join(''):'<span style="background:none" class="mute">Nothing waiting</span>';
+ $('#rows').innerHTML=J.slice(-12).reverse().map(j=>`<tr><td class="id">${j.id}</td><td><span class="chip ${j.state}">${j.state=='queued'&&j.requeues?'requeued':j.state}</span></td><td>${esc(j.worker||'–')}</td><td>${j.priority??'–'}</td><td>${sec(j.t_run?j.t_run-j.t_sub:j.state=='queued'?now-j.t_sub:null)}</td><td>${sec(j.t_end?j.t_end-j.t_sub:null)}</td></tr>`).join('')||'<tr><td colspan=6 class="mute">No jobs yet. Send one from the panel on the right.</td></tr>';
+ gantt(now,W,J);net()}
+function gantt(now,W,J){const c=$('#cv'),dp=devicePixelRatio||1,w=c.clientWidth,h=Math.max(W.length,1)*38+20;c.style.height=h+'px';c.width=w*dp;c.height=h*dp;
+ const g=c.getContext('2d');g.scale(dp,dp);const x=t=>(t-(now-60))/60*w;
+ W.forEach((k,i)=>{g.fillStyle=k.state=='down'?'#f3d6d3':i%2?'#eef1f3':'#e5eaee';g.fillRect(0,i*38,w,38)});
+ g.font='11px system-ui';g.fillStyle='#64727f';for(let s=0;s<=60;s+=10){const px=x(now-s);g.fillRect(px,0,1,W.length*38);g.fillText(s?'-'+s+'s':'now',Math.min(Math.max(px-12,2),w-26),W.length*38+14)}
+ J.forEach(j=>{const i=W.findIndex(k=>k.id==j.worker);if(i<0||!j.t_run)return;const a=Math.max(x(j.t_run),0),b=x(j.t_end||now);if(b<0)return;
+  g.fillStyle=col[j.state]||'#2d5be3';g.fillRect(a,i*38+6,Math.max(b-a,2),26);if(b-a>34){g.fillStyle='#fff';g.fillText('…'+String(j.id).slice(-4),a+5,i*38+23)}})}
+function net(){const el=$('#net'),s=st.stats;if(!s){el.innerHTML='<span class="mute">No statistics stream. Start POX with <code>switch_stats</code> to see switches and links here.</span>';return}
+ const sum=(o,k)=>o&&typeof o=='object'?Object.entries(o).reduce((n,[a,v])=>n+(a==k&&typeof v=='number'?v:sum(v,k)),0):0;
+ let h='';const L=s.links||[];(Array.isArray(L)?L.map(l=>[Object.entries(l).filter(([k,v])=>k!='up'&&typeof v!='object'&&typeof v!='boolean').map(e=>e[1]).join(' – '),l.up]):Object.entries(L).map(([k,l])=>[k,l.up])).forEach(([n,up])=>h+=`<div><span>${esc(n)}</span><span class="chip ${up?'idle':'down'}">${up?'up':'down'}</span></div>`);
+ Object.entries(s.switches||{}).forEach(([n,v])=>{const b=sum(v,'rx_bytes')+sum(v,'tx_bytes'),p=prev[n],r=p&&s.t>p.t?(b-p.b)/(s.t-p.t):null;prev[n]={b,t:s.t};
+  h+=`<div><span><b>${esc(n)}</b> <span class="mute">${v.flows??0} flows${v.stale?' · no reply':''}</span></span><span>${r==null?'–':r>1024?(r/1024).toFixed(1)+' KB/s':r.toFixed(0)+' B/s'}</span></div>`});el.innerHTML=h}
+function demo(){if(sim)return;conn('demo','Demo data (bridge not running)');let c=0;sim={jobs:[],n:1000,W:['w1','w2','w3','w4'].map(id=>({id,state:'idle',job:null}))};
+ sim.add=(d,p)=>sim.jobs.push({id:sim.n++,state:'queued',worker:null,t_sub:Date.now()/1000,t_run:null,t_end:null,duration:d,priority:p,requeues:0});
+ setInterval(()=>{const t=Date.now()/1000;c++;if(Math.random()<.5)sim.add(+(1+Math.random()*3).toFixed(1),Math.random()*10|0);
+  sim.W.forEach(w=>{if(w.state=='busy'&&t-w.job.t_run>=w.job.duration){w.job.state='done';w.job.t_end=t;w.state='idle';w.job=null}});
+  if(Math.random()<.015){const w=sim.W[Math.random()*4|0];if(w.job){Object.assign(w.job,{state:'queued',t_run:null,worker:null});w.job.requeues++;w.job=null}w.state='down';setTimeout(()=>w.state='idle',5000)}
+  sim.W.filter(w=>w.state=='idle').forEach(w=>{const j=sim.jobs.find(j=>j.state=='queued');if(j){Object.assign(j,{state:'running',worker:w.id,t_run:t});w.state='busy';w.job=j}});
+  sim.jobs=sim.jobs.slice(-150);const sw={};['s1','s2','s3'].forEach((n,i)=>sw[n]={flows:6+i,ports:{1:{rx_bytes:c*(900+i*400),tx_bytes:c*700}}});
+  setSt({now:t,algo:'fcfs',workers:sim.W.map(w=>({id:w.id,state:w.state,job:w.job&&w.job.id})),jobs:sim.jobs,stats:{t,switches:sw,links:[{a:'s1',b:'s2',up:true},{a:'s2',b:'s3',up:true},{a:'s1',b:'s3',up:true}]}})},500)}
+setInterval(render,250);addEventListener('resize',render);live();
+</script></body></html>
