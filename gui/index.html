@@ -53,18 +53,18 @@ async function send(e){e.preventDefault();const b={count:+$('#n').value,gap:+$('
 function render(){if(!st)return;const now=st.now+(Date.now()-st.rx)/1000,J=st.jobs,W=st.workers;
  const q=J.filter(j=>j.state=='queued'),r=J.filter(j=>j.state=='running'),d=J.filter(j=>j.t_end);
  $('#kq').textContent=q.length;$('#kr').textContent=r.length;$('#kd').textContent=d.length;
- const w=avg(J.filter(j=>j.t_run).map(j=>j.t_run-j.t_sub)),t=avg(d.map(j=>j.t_end-j.t_sub));
+ const w=avg(J.filter(j=>j.t_run&&!j.hist).map(j=>j.t_run-j.t_sub)),t=avg(d.filter(j=>!j.hist).map(j=>j.t_end-j.t_sub));
  $('#kw').textContent=sec(w);$('#kt').textContent=sec(t);$('#algo').textContent=st.algo&&st.algo!='?'?'· '+st.algo+' scheduling':'';
  $('#names').innerHTML=W.length?W.map(x=>`<div><b>${esc(x.id)}</b><small class="${x.state}">${x.state=='busy'?'running job …'+String(x.job).slice(-4):x.state=='down'?'offline':'available'}</small></div>`).join(''):'<div class="mute">No workers yet</div>';
  $('#queue').innerHTML=q.length?q.sort((a,b)=>a.t_sub-b.t_sub).slice(0,40).map(j=>`<span title="waiting ${sec(now-j.t_sub)}">…${String(j.id).slice(-4)}${j.priority!=null?' · p'+j.priority:''}</span>`).join(''):'<span style="background:none" class="mute">Nothing waiting</span>';
- $('#rows').innerHTML=J.slice(-12).reverse().map(j=>`<tr><td class="id">${j.id}</td><td><span class="chip ${j.state}">${j.state=='queued'&&j.requeues?'requeued':j.state}</span></td><td>${esc(j.worker||'–')}</td><td>${j.priority??'–'}</td><td>${sec(j.t_run?j.t_run-j.t_sub:j.state=='queued'?now-j.t_sub:null)}</td><td>${sec(j.t_end?j.t_end-j.t_sub:null)}</td></tr>`).join('')||'<tr><td colspan=6 class="mute">No jobs yet. Send one from the panel on the right.</td></tr>';
+ $('#rows').innerHTML=J.slice(-12).reverse().map(j=>`<tr><td class="id">${j.id}</td><td><span class="chip ${j.state}" title="${esc(j.error||'')}">${j.state=='queued'&&j.requeues?'requeued':j.state}</span></td><td>${esc(j.worker||'–')}</td><td>${j.priority??'–'}</td><td>${sec(j.hist?null:j.t_run?j.t_run-j.t_sub:j.state=='queued'?now-j.t_sub:null)}</td><td>${sec(j.hist||!j.t_end?null:j.t_end-j.t_sub)}</td></tr>`).join('')||'<tr><td colspan=6 class="mute">No jobs yet. Send one from the panel on the right.</td></tr>';
  gantt(now,W,J);net()}
 function gantt(now,W,J){const c=$('#cv'),dp=devicePixelRatio||1,w=c.clientWidth,h=Math.max(W.length,1)*38+20;c.style.height=h+'px';c.width=w*dp;c.height=h*dp;
  const g=c.getContext('2d');g.scale(dp,dp);const x=t=>(t-(now-60))/60*w;
  W.forEach((k,i)=>{g.fillStyle=k.state=='down'?'#f3d6d3':i%2?'#eef1f3':'#e5eaee';g.fillRect(0,i*38,w,38)});
  g.font='11px system-ui';g.fillStyle='#64727f';for(let s=0;s<=60;s+=10){const px=x(now-s);g.fillRect(px,0,1,W.length*38);g.fillText(s?'-'+s+'s':'now',Math.min(Math.max(px-12,2),w-26),W.length*38+14)}
- J.forEach(j=>{const i=W.findIndex(k=>k.id==j.worker);if(i<0||!j.t_run)return;const a=Math.max(x(j.t_run),0),b=x(j.t_end||now);if(b<0)return;
-  g.fillStyle=col[j.state]||'#2d5be3';g.fillRect(a,i*38+6,Math.max(b-a,2),26);if(b-a>34){g.fillStyle='#fff';g.fillText('…'+String(j.id).slice(-4),a+5,i*38+23)}})}
+ J.forEach(j=>{const i=W.findIndex(k=>k.id==j.worker);if(i<0||!j.t_run)return;const a=Math.max(x(j.t_run),0),b=x(j.state=='running'?now:(j.t_end||j.t_run));if(b<0)return;
+  g.fillStyle=col[j.state]||'#2d5be3';g.fillRect(a,i*38+6,Math.max(b-a,2),26);if(b-a>48){g.fillStyle='#fff';g.fillText('…'+String(j.id).slice(-4),a+5,i*38+23)}})}
 function net(){const el=$('#net'),s=st.stats;if(!s){el.innerHTML='<span class="mute">No statistics stream. Start POX with <code>switch_stats</code> to see switches and links here.</span>';return}
  const sum=(o,k)=>o&&typeof o=='object'?Object.entries(o).reduce((n,[a,v])=>n+(a==k&&typeof v=='number'?v:sum(v,k)),0):0;
  let h='';const L=s.links||[];(Array.isArray(L)?L.map(l=>[`${l.a} – ${l.b}`,l.up]):Object.entries(L).map(([k,l])=>[k,l.up])).forEach(([n,up])=>h+=`<div><span>${esc(n)}</span><span class="chip ${up?'idle':'down'}">${up?'up':'down'}</span></div>`);

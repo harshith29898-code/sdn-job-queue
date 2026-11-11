@@ -9,6 +9,9 @@ import argparse, json, os, re, socket, threading, time
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 
 lock = threading.Condition()
+# While the existing log is replayed at start-up ("live" is False), "now" is the time of the newest
+# dispatch line instead of the wall clock, and those jobs are marked "hist" (their waits are unknown).
+CLOCK = {"live": False, "ts": time.time()}
 S = {"algo": "?", "workers": {}, "jobs": {}, "stats": None}
 ver = 0
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,11 +23,11 @@ def touch():
     lock.notify_all()
 
 
-def job(jid):
+def job(jid, t=None):
     if jid not in S["jobs"]:
-        S["jobs"][jid] = {"id": jid, "state": "queued", "worker": None, "t_sub": time.time(),
+        S["jobs"][jid] = {"id": jid, "state": "queued", "worker": None, "t_sub": t or time.time(),
                           "t_run": None, "t_end": None, "duration": None, "priority": None,
-                          "requeues": 0, "src": "other"}
+                          "requeues": 0, "src": "other", "hist": not CLOCK["live"]}
         for old in list(S["jobs"])[:-300]:
             del S["jobs"][old]
     return S["jobs"][jid]
@@ -34,27 +37,57 @@ def worker(wid):
     return S["workers"].setdefault(wid, {"id": wid, "state": "idle", "job": None})
 
 
+# server.py prints from several threads, so one physical line of the log can hold several
+# messages glued together, e.g. "[RESULT] Job 5 completed by w1[SCHEDULER] SJF: Job 6 -> w1 (...)".
+# Every message in a line has to be read, in order, or results get lost and jobs stay "running".
+EVENTS = [
+    ("algo", re.compile(r"\[SCHEDULER\] Algorithm: (\w+)")),
+    ("reg", re.compile(r"\[WORKER\] ([\w.-]+) registered")),
+    ("down", re.compile(r"\[WORKER\] ([\w.-]+) disconnected")),
+    ("down", re.compile(r"\[WATCHDOG\] ([\w.-]+) heartbeat timed out")),
+    ("queued", re.compile(r"\[CLIENT\] Queued job (\d+)")),
+    ("run", re.compile(r"\[SCHEDULER\] \w+: Job (\d+) -> ([\w.-]+) \(dispatched at ([0-9.]+)\)")),
+    ("requeue", re.compile(r"\[SCHEDULER\] Job (\d+) requeued")),
+    ("result", re.compile(r"\[RESULT\] Job (\d+) (\w+) by ([\w.-]+)")),
+]
+
+
 def apply(line):
-    now = time.time()
+    found = sorted((m.start(), kind, m) for kind, rx in EVENTS for m in rx.finditer(line))
+    if not found:
+        return
     with lock:
-        if m := re.search(r"\[SCHEDULER\] Algorithm: (\w+)", line):
-            S["algo"] = m[1].lower()
-        elif m := re.search(r"\[WORKER\] (\S+) registered", line):
-            w = worker(m[1]); w.update(state="idle", job=None)
-        elif m := re.search(r"\[WORKER\] (\S+) disconnected|\[WATCHDOG\] (\S+) heartbeat", line):
-            worker(m[1] or m[2]).update(state="down", job=None)
-        elif m := re.search(r"\[CLIENT\] Queued job (\d+)", line):
-            job(int(m[1]))
-        elif m := re.search(r"Job (\d+) -> (\S+)", line):
-            j = job(int(m[1])); j.update(state="running", worker=m[2], t_run=now)
-            worker(m[2]).update(state="busy", job=j["id"])
-        elif m := re.search(r"\[SCHEDULER\] Job (\d+) requeued", line):
-            j = job(int(m[1])); j.update(state="queued", worker=None, t_run=None, requeues=j["requeues"] + 1)
-        elif m := re.search(r"\[RESULT\] Job (\d+) (\w+) by (\S+)", line):
-            j = job(int(m[1])); j.update(state="done" if m[2] == "completed" else "failed", worker=m[3], t_end=now)
-            worker(m[3]).update(state="idle", job=None)
-        else:
-            return
+        for _, kind, m in found:
+            now = time.time() if CLOCK["live"] else CLOCK["ts"]
+            if kind == "algo":
+                S["algo"] = m[1].lower()
+            elif kind == "reg":
+                worker(m[1]).update(state="idle", job=None)
+            elif kind == "down":
+                worker(m[1]).update(state="down", job=None)
+            elif kind == "queued":
+                job(int(m[1]), now)
+            elif kind == "run":
+                t = float(m[3]); CLOCK["ts"] = max(CLOCK["ts"], t) if not CLOCK["live"] else CLOCK["ts"]
+                j = job(int(m[1]), t); w = worker(m[2])
+                old = S["jobs"].get(w["job"])
+                if old and old is not j and old["state"] == "running":   # one job per worker: it must have finished
+                    old.update(state="done", t_end=t)
+                if j["hist"] or j["t_sub"] > t:      # submit time is only known from the log for live jobs,
+                    j["t_sub"] = t                   # and never later than the moment it was dispatched
+                j.update(state="running", worker=m[2], t_run=t)
+                w.update(state="busy", job=j["id"])
+            elif kind == "requeue":
+                j = job(int(m[1]), now); j.update(state="queued", worker=None, t_run=None, requeues=j["requeues"] + 1)
+                for w in S["workers"].values():
+                    if w["job"] == j["id"]:
+                        w.update(state="idle", job=None)
+            elif kind == "result":
+                j = job(int(m[1]), now)
+                j.update(state="done" if m[2] == "completed" else "failed", worker=m[3], t_end=max(now, j["t_run"] or 0))
+                w = worker(m[3])
+                if w["job"] in (None, j["id"]) and w["state"] != "down":
+                    w.update(state="idle", job=None)
         touch()
 
 
@@ -75,6 +108,7 @@ def tail(path):
                         break
         except OSError:
             pass
+        CLOCK["live"] = True
         time.sleep(0.1)
 
 
